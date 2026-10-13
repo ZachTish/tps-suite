@@ -1,0 +1,1174 @@
+import { normalizeLinkedSubitemCheckboxMarker } from './linked-subitem-mapping';
+
+const TASK_LINE_RE = /^(\s*(?:[-*+]|\d+[.)])\s+)\[([^\]\r\n]?)\](\s*)(.*)$/;
+const TAG_GLOBAL_RE = /(?:^|\s)(#[\p{L}\p{N}_/-]+)/gu;
+const TPS_INLINE_METADATA_RE = /\s*(?:\[(?:tpsInlineProps|tps-inline-props)\s*::\s*[^\]]+\]|%%\s*tps-inline-props\s*:[\s\S]*?%%|<!--\s*tps-inline-props\s*:[\s\S]*?-->|<span\b[^>]*data-tps-inline-props\s*=\s*(?:"[^"]*"|'[^']*')[^>]*>\s*<\/span>|\[\^\s*tps-inline:[^\]]+\](?::\s*\S+)?)\s*/gi;
+const LINE_BLOCK_ID_RE = /(?:^|[ \t])\^([A-Za-z0-9-]+)[ \t]*$/u;
+
+export const TASK_ASSOCIATED_NOTE_PATH_KEY = 'associatedNotePath';
+
+export interface ParsedTaskLine {
+  prefix: string;
+  marker: string;
+  token: string;
+  body: string;
+}
+
+export interface TaskInlineField {
+  key: string;
+  value: string;
+}
+
+export interface TaskInlineFieldRange extends TaskInlineField {
+  start: number;
+  end: number;
+}
+
+export interface LineSemanticMetadata {
+  fields: TaskInlineField[];
+  tags: string[];
+  displayText: string;
+}
+
+export const TASK_COMPLETED_DATE_FIELD = 'completedDate';
+
+export interface TaskLineTimestampOptions {
+  enabled?: boolean;
+  createdKey?: string;
+  modifiedKey?: string;
+  format?: string;
+  now?: Date;
+  markCreated?: boolean;
+  markModified?: boolean;
+}
+
+export function parseTaskLine(line: string): ParsedTaskLine | null {
+  const match = String(line || '').match(TASK_LINE_RE);
+  if (!match) return null;
+  const marker = String(match[2] ?? ' ');
+  return {
+    prefix: String(match[1] || ''),
+    marker,
+    token: `[${marker}]`,
+    body: String(match[4] || '').trim(),
+  };
+}
+
+/**
+ * Read a native Obsidian block ID from the absolute end of a Markdown line.
+ *
+ * Obsidian only accepts Latin letters, numbers, and dashes in block IDs. Keeping
+ * this metadata at the absolute end is important: inline fields or hidden TPS
+ * carriers appended after it make the block reference unusable.
+ */
+export function readLineBlockId(line: string): string {
+  return String(line || '').match(LINE_BLOCK_ID_RE)?.[1] || '';
+}
+
+export function stripLineBlockId(line: string): string {
+  const source = String(line || '');
+  const match = source.match(LINE_BLOCK_ID_RE);
+  if (!match || match.index === undefined) return source;
+  return source.slice(0, match.index).trimEnd();
+}
+
+export function appendLineBlockId(line: string, blockId: string): string {
+  const cleanId = String(blockId || '').trim().replace(/^\^/u, '');
+  const source = stripLineBlockId(line).trimEnd();
+  if (!cleanId || !/^[A-Za-z0-9-]+$/u.test(cleanId)) return source;
+  return `${source} ^${cleanId}`;
+}
+
+export function getTaskDisplayTitle(line: string): string {
+  return getPlainTaskTitle(getTaskSourceTitle(line));
+}
+
+export function getTaskSourceTitle(line: string): string {
+  const parsed = parseTaskLine(line);
+  if (!parsed) return '';
+  return stripTaskMetadata(parsed.body);
+}
+
+export interface ParsedTaskTitleLink {
+  targetPath: string;
+  displayTitle: string;
+}
+
+export function parseTaskTitleLink(rawTitle: string): ParsedTaskTitleLink | null {
+  const title = String(rawTitle || '').replace(/\s+/g, ' ').trim();
+  if (!title) return null;
+  const leadingLink = parseLeadingTaskTitleLink(title);
+  if (!leadingLink) return null;
+  const targetPath = normalizeTaskAssociatedNotePath(leadingLink.rawTarget);
+  if (!targetPath) return null;
+  return {
+    targetPath,
+    displayTitle: leadingLink.displayTitle,
+  };
+}
+
+export function getPlainTaskTitle(rawTitle: string): string {
+  return unwrapTaskTitleLinks(String(rawTitle || ''))
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function readTaskAssociatedNotePath(line: string): string {
+  for (const block of getTaskInlinePropsJsonBlocks(line)) {
+    const key = findCaseInsensitiveRecordKey(block.value, TASK_ASSOCIATED_NOTE_PATH_KEY);
+    const path = key ? normalizeTaskAssociatedNotePath(block.value[key]) : '';
+    if (path) return path;
+  }
+  return '';
+}
+
+export function setTaskAssociatedNotePath(line: string, path: string): string {
+  const cleanPath = normalizeTaskAssociatedNotePath(path);
+  if (!cleanPath) return line;
+  if (readTaskAssociatedNotePath(line) === cleanPath) return line;
+  return mergeTpsInlinePropsMetadata(line, { [TASK_ASSOCIATED_NOTE_PATH_KEY]: cleanPath });
+}
+
+export function mergeTpsInlinePropsMetadata(
+  line: string,
+  patch: Record<string, unknown>,
+): string {
+  const entries = Object.entries(patch || {})
+    .map(([key, value]) => [String(key || '').trim(), value] as const)
+    .filter(([key, value]) => key.length > 0 && value !== undefined);
+  if (entries.length === 0) return line;
+  const blockId = readLineBlockId(line);
+  const sourceLine = blockId ? stripLineBlockId(line) : line;
+  const blocks = getTaskInlinePropsJsonBlocks(sourceLine);
+  const target = blocks.find((block) => entries.some(([key]) => !!findCaseInsensitiveRecordKey(block.value, key)))
+    || blocks[0];
+  if (target) {
+    const value = { ...target.value };
+    for (const [key, nextValue] of entries) {
+      const matches = Object.keys(value)
+        .filter((candidate) => candidate.trim().toLowerCase() === key.toLowerCase());
+      const destinationKey = matches[0] || key;
+      matches.slice(1).forEach((duplicate) => delete value[duplicate]);
+      value[destinationKey] = nextValue;
+    }
+    if (JSON.stringify(value) === JSON.stringify(target.value)) return line;
+    const serialized = serializeTaskInlinePropsPayload(value, target.encoding);
+    const updated = `${sourceLine.slice(0, target.payloadStart)}${serialized}${sourceLine.slice(target.payloadEnd)}`;
+    return blockId ? appendLineBlockId(updated, blockId) : updated;
+  }
+
+  const updated = `${String(sourceLine || '').trimEnd()} %% tps-inline-props:${JSON.stringify(Object.fromEntries(entries))} %%`.trimEnd();
+  return blockId ? appendLineBlockId(updated, blockId) : updated;
+}
+
+export function preserveTpsInlinePropsMetadata(sourceLine: string, editedLine: string): string {
+  const source = String(sourceLine || '');
+  const blockId = readLineBlockId(source);
+  const carriers = getTaskInlinePropsMetadataRanges(source)
+    .map((range) => source.slice(range.start, range.end).trim())
+    .filter(Boolean);
+  const visible = stripLineBlockId(stripTaskInlinePropsMetadata(editedLine)).trimEnd();
+  const updated = carriers.length === 0
+    ? visible
+    : `${visible} ${carriers.join(' ')}`.trimEnd();
+  return blockId ? appendLineBlockId(updated, blockId) : updated;
+}
+
+export function normalizeTaskAssociatedNotePath(rawValue: unknown): string {
+  let value = String(rawValue ?? '').trim();
+  if (!value) return '';
+  value = value.replace(/^["']|["']$/g, '').trim();
+
+  const wikiLink = value.match(/^!?\[\[([^|\]#]+)(?:#[^|\]]+)?(?:\|[^\]]*)?\]\]$/u);
+  if (wikiLink) value = String(wikiLink[1] || '').trim();
+  const markdownLink = value.match(/^\[[^\]]+\]\(([^)]+)\)$/u);
+  if (markdownLink) value = String(markdownLink[1] || '').trim();
+
+  if (value.startsWith('<') && value.endsWith('>')) value = value.slice(1, -1).trim();
+  if (!value || isExternalTaskLinkTarget(value)) return '';
+  try {
+    value = decodeURIComponent(value);
+  } catch {
+    // Preserve a literal vault path containing malformed percent escapes.
+  }
+  if (!value || isExternalTaskLinkTarget(value)) return '';
+  return value
+    .split('#', 1)[0]
+    .replace(/^\/+/, '')
+    .replace(/\\/g, '/')
+    .replace(/\/{2,}/g, '/')
+    .trim();
+}
+
+export function getTaskEditableBody(line: string): string {
+  const parsed = parseTaskLine(line);
+  return parsed ? stripTaskEditorMetadata(parsed.body) : '';
+}
+
+/**
+ * A task editor may wrap visually, but one Markdown task record cannot contain
+ * hard line breaks. Flatten typed or pasted line breaks without otherwise
+ * rewriting the user's spacing, tags, or punctuation.
+ */
+export function flattenTaskEditableBodyLineBreaks(value: string): string {
+  return String(value || '').replace(/\r\n?|\n/gu, ' ');
+}
+
+export function setTaskEditableBody(line: string, body: string): string {
+  const parsed = parseTaskLine(line);
+  if (!parsed) return line;
+  const cleanBody = stripTaskEditorMetadata(
+    flattenTaskEditableBodyLineBreaks(body),
+  );
+  if (!cleanBody) return line;
+  if (cleanBody === stripTaskEditorMetadata(parsed.body)) return line;
+  const sourceAssociation = resolveTaskAssociationForEdit(line, cleanBody);
+  const editableLine = `${parsed.prefix}${parsed.token} ${cleanBody}`.trimEnd();
+  const editableTitle = getTaskSourceTitle(editableLine);
+  const normalizedTitle = normalizeLeadingLinkedTaskTitle(editableTitle);
+  let nextLine = editableTitle && normalizedTitle !== editableTitle
+    ? replaceTaskTitlePreservingMetadata(editableLine, normalizedTitle)
+    : editableLine;
+  for (const metadata of extractTaskEditorMetadata(parsed.body)) {
+    nextLine = `${nextLine.trimEnd()} ${metadata}`;
+  }
+  if (sourceAssociation) nextLine = setTaskAssociatedNotePath(nextLine, sourceAssociation);
+  return nextLine;
+}
+
+export function setTaskCheckboxToken(line: string, token: string): string {
+  const normalizedToken = normalizeCheckboxToken(token);
+  if (!normalizedToken) return line;
+  return String(line || '').replace(TASK_LINE_RE, (_match, prefix: string, _marker: string, _gap: string, body: string) => {
+    return `${prefix}${normalizedToken} ${String(body || '').trimStart()}`.trimEnd();
+  });
+}
+
+export function convertTaskLineToBullet(line: string): string {
+  const withoutCompletedDate = setInlineFieldValueOnTaskLine(line, TASK_COMPLETED_DATE_FIELD, null);
+  const parsed = parseTaskLine(withoutCompletedDate);
+  if (!parsed) return line;
+  return `${parsed.prefix}${parsed.body}`.trimEnd();
+}
+
+export function updateTaskCompletedDateForCheckboxState(
+  line: string,
+  checkboxState: string | null | undefined,
+  options: { completeMarkers?: string[]; completedAt?: Date } = {},
+): string {
+  const parsed = parseTaskLine(line);
+  if (!parsed) return line;
+  const marker = normalizeCheckboxMarker(checkboxState ?? parsed.token);
+  const completeMarkers = normalizeCompleteMarkers(options.completeMarkers);
+  const completedDateFields = readSemanticInlineFieldRanges(parsed.body)
+    .filter((field) => field.key.toLowerCase() === TASK_COMPLETED_DATE_FIELD.toLowerCase());
+  if (completeMarkers.has(marker)) {
+    const existingValue = completedDateFields.find((field) => field.value.trim())?.value.trim() || '';
+    if (completedDateFields.length === 1 && existingValue) return line;
+    return setInlineFieldValueOnTaskLine(
+      line,
+      TASK_COMPLETED_DATE_FIELD,
+      existingValue || formatTaskLineDate(options.completedAt ?? new Date()),
+    );
+  }
+  if (completedDateFields.length === 0) return line;
+  return setInlineFieldValueOnTaskLine(line, TASK_COMPLETED_DATE_FIELD, null);
+}
+
+export function updateTaskLineTimestamps(
+  line: string,
+  options: TaskLineTimestampOptions = {},
+): string {
+  if (!parseTaskLine(line)) return line;
+  if (options.enabled === false) return line;
+  const now = options.now ?? new Date();
+  const formatted = formatTaskLineTimestamp(now, options.format);
+  let next = line;
+  const createdKey = normalizeInlineFieldKey(options.createdKey || 'datecreated');
+  const modifiedKey = normalizeInlineFieldKey(options.modifiedKey || 'datemodified');
+  if (options.markCreated === true && createdKey && !readInlineFieldValue(next, createdKey)) {
+    next = setInlineFieldValueOnTaskLine(next, createdKey, formatted);
+  }
+  if (options.markModified === true && modifiedKey) {
+    next = setInlineFieldValueOnTaskLine(next, modifiedKey, formatted);
+  }
+  return next;
+}
+
+export function setTaskTitle(line: string, title: string): string {
+  const parsed = parseTaskLine(line);
+  if (!parsed) return line;
+  const cleanTitle = normalizeLeadingLinkedTaskTitle(title);
+  if (!cleanTitle) return line;
+  const association = resolveTaskAssociationForEdit(line, title);
+  let nextLine = replaceTaskTitlePreservingMetadata(line, cleanTitle);
+  if (association) nextLine = setTaskAssociatedNotePath(nextLine, association);
+  return nextLine;
+}
+
+export function readInlineFieldValue(line: string, key: string): string {
+  const body = parseTaskLine(line)?.body ?? String(line || '');
+  const normalizedKey = String(key || '').trim().toLowerCase();
+  if (!normalizedKey) return '';
+  for (const field of readSemanticInlineFieldRanges(body)) {
+    if (field.key.toLowerCase() === normalizedKey) return field.value.trim();
+  }
+  return '';
+}
+
+export function readTaskInlineFields(line: string): TaskInlineField[] {
+  const body = parseTaskLine(line)?.body ?? String(line || '');
+  return readSemanticInlineFieldRanges(body).map((field) => ({
+    key: field.key,
+    value: field.value.trim(),
+  }));
+}
+
+/**
+ * Parse the reusable semantic portions of one already de-prefixed Markdown
+ * line. Inline fields are scanned once, then reused for tags and visible text.
+ * This is the canonical read path for cross-plugin synthetic Base rows.
+ */
+export function readLineSemanticMetadata(line: string): LineSemanticMetadata {
+  const source = String(line || '');
+  const fieldRanges = readSemanticInlineFieldRanges(source);
+  const visibleTagRanges = getVisibleTaskTagRanges(source, fieldRanges);
+  const fields = fieldRanges.map((field) => ({ key: field.key, value: field.value.trim() }));
+  const tags = parseTaskTagValues([
+    ...visibleTagRanges.map((range) => range.tag),
+    ...fields
+      .filter((field) => /^(?:tag|tags)$/iu.test(field.key.trim()))
+      .map((field) => field.value),
+  ]);
+  const displaySource = removeTaskTextRanges(source, normalizeTaskTextRanges([
+    ...getTaskInlinePropsMetadataRanges(source),
+    ...fieldRanges,
+    ...visibleTagRanges,
+    ...getLineBlockIdRanges(source),
+  ]), ' ')
+    .replace(/<!--\s*-->/gu, ' ');
+  const displayText = getPlainTaskTitle(displaySource)
+    .replace(/`([^`]+)`/gu, '$1')
+    .replace(/[*_~]{1,3}([^*_~]+)[*_~]{1,3}/gu, '$1')
+    .replace(/\s+/gu, ' ')
+    .trim();
+  return { fields, tags, displayText };
+}
+
+/**
+ * Read semantic inline fields as a key-preserving record for visibility and
+ * scope evaluation. Empty values remain present so callers can distinguish a
+ * blank `[key:: ]` field from a missing field.
+ */
+export function readTaskInlineFieldRecord(line: string): Record<string, string> {
+  const record: Record<string, string> = {};
+  const seen = new Set<string>();
+  for (const field of readTaskInlineFields(line)) {
+    const key = String(field.key || '').trim();
+    const normalizedKey = key.toLowerCase();
+    if (!key || seen.has(normalizedKey)) continue;
+    seen.add(normalizedKey);
+    record[key] = field.value;
+  }
+  return record;
+}
+
+/**
+ * Return inline fields with offsets relative to the supplied source.
+ *
+ * Unlike a flat regular expression, the scanner understands nested brackets,
+ * so values such as `[[Projects/Alpha]], [[Projects/Beta]]` stay intact.
+ */
+export function readInlineFieldRanges(source: string): TaskInlineFieldRange[] {
+  return scanTaskInlineFields(String(source || '')).map((field) => ({ ...field }));
+}
+
+/**
+ * Return only inline fields that represent persisted Markdown properties.
+ *
+ * Generic HTML comments such as `<!-- [project:: [[Alpha]]] -->` are an
+ * intentional hidden property carrier and remain semantic. Field-shaped text
+ * inside a closed inline-code span or a protected TPS JSON carrier is merely
+ * payload/example text and must never participate in reads, writes, or stable
+ * identity resolution.
+ */
+export function readSemanticInlineFieldRanges(source: string): TaskInlineFieldRange[] {
+  const value = String(source || '');
+  const excludedRanges = normalizeTaskTextRanges([
+    ...getTaskInlinePropsMetadataRanges(value),
+    ...getClosedInlineCodeRanges(value),
+  ]);
+  return scanTaskInlineFields(value)
+    .filter((field) => !isTextRangeContainedByAny(field, excludedRanges))
+    .map((field) => ({ ...field }));
+}
+
+export function readTaskInlinePropsMetadataRanges(source: string): TaskTextRange[] {
+  return getTaskInlinePropsMetadataRanges(String(source || ''))
+    .map((range) => ({ ...range }));
+}
+
+export function setInlineFieldValueOnTaskLine(line: string, key: string, value: string | null): string {
+  const blockId = readLineBlockId(line);
+  const source = blockId ? stripLineBlockId(line) : line;
+  const parsed = parseTaskLine(source);
+  if (!parsed) return line;
+  const cleanKey = String(key || '').trim();
+  if (!cleanKey) return line;
+  const nextBody = setInlineFieldValueOnBody(parsed.body, cleanKey, value);
+  const updated = `${parsed.prefix}${parsed.token}${nextBody ? ` ${nextBody}` : ''}`.trimEnd();
+  return blockId ? appendLineBlockId(updated, blockId) : updated;
+}
+
+export function setInlineFieldValueOnLine(line: string, key: string, value: string | null): string {
+  const blockId = readLineBlockId(line);
+  const source = blockId ? stripLineBlockId(line) : String(line || '');
+  const cleanKey = String(key || '').trim();
+  if (!cleanKey) return String(line || '');
+  const indentation = source.match(/^[\t ]*/u)?.[0] || '';
+  const updated = `${indentation}${setInlineFieldValueOnBody(source.slice(indentation.length), cleanKey, value)}`.trimEnd();
+  return blockId ? appendLineBlockId(updated, blockId) : updated;
+}
+
+export function readInlineTags(line: string): string[] {
+  const body = parseTaskLine(line)?.body ?? String(line || '');
+  const tags: string[] = [];
+  const seen = new Set<string>();
+  for (const range of getVisibleTaskTagRanges(body)) {
+    const key = range.tag.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    tags.push(range.tag);
+  }
+  return tags;
+}
+
+/**
+ * Read the complete semantic tag list for a task-shaped Markdown line.
+ *
+ * Task filters treat raw `#tags`, singular `[tag:: ...]`, and plural
+ * `[tags:: ...]` fields as one list. Context-menu mutation helpers keep using
+ * `readInlineTags`, which intentionally represents writable raw hashtags.
+ */
+export function readTaskLineTags(line: string): string[] {
+  const source = parseTaskLine(line)?.body ?? String(line || '');
+  return readLineSemanticMetadata(source).tags;
+}
+
+/**
+ * Parse persisted task tags without the incremental-typing cleanup used by
+ * settings inputs. Stored tags are never discarded merely because one is a
+ * prefix of another, and Unicode letters/numbers remain valid.
+ */
+export function parseTaskTagValues(raw: unknown): string[] {
+  const tags: string[] = [];
+  const seen = new Set<string>();
+  const visit = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (value == null || value === false) return;
+    String(value)
+      .replace(/^\s*\[|\]\s*$/gu, '')
+      .split(/[,\s]+/u)
+      .map((token) => normalizeInlineTag(token))
+      .filter(Boolean)
+      .forEach((tag) => {
+        const key = tag.toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        tags.push(key);
+      });
+  };
+  visit(raw);
+  return tags;
+}
+
+export function addInlineTagToTaskLine(line: string, tag: string): string {
+  const normalized = normalizeInlineTag(tag);
+  if (!normalized) return line;
+  const current = readInlineTags(line).map((value) => value.toLowerCase());
+  if (current.includes(normalized.toLowerCase())) return line;
+  const blockId = readLineBlockId(line);
+  const source = blockId ? stripLineBlockId(line) : String(line || '');
+  const updated = `${source.trimEnd()} #${normalized}`.trimEnd();
+  return blockId ? appendLineBlockId(updated, blockId) : updated;
+}
+
+/**
+ * Add a comma/whitespace-delimited tag entry in one caller-owned line update.
+ * Parsing first makes the operation atomic and case-insensitively deduplicated.
+ */
+export function addInlineTagsToTaskLine(line: string, rawTags: unknown): string {
+  const existing = new Set(readTaskLineTags(line).map((tag) => tag.toLowerCase()));
+  return parseTaskTagValues(rawTags).reduce((nextLine, tag) => {
+    const normalized = tag.toLowerCase();
+    if (existing.has(normalized)) return nextLine;
+    existing.add(normalized);
+    return addInlineTagToTaskLine(nextLine, tag);
+  }, String(line || ''));
+}
+
+export function removeInlineTagFromTaskLine(line: string, tag: string): string {
+  const normalized = normalizeInlineTag(tag).toLowerCase();
+  if (!normalized) return line;
+  const blockId = readLineBlockId(line);
+  const source = blockId ? stripLineBlockId(line) : String(line || '');
+  const matchingRanges = getVisibleTaskTagRanges(source)
+    .filter((range) => range.tag.toLowerCase() === normalized)
+    .map((range) => getTagRemovalRange(source, range));
+  const updated = removeTaskTextRanges(source, matchingRanges).trimEnd();
+  return blockId ? appendLineBlockId(updated, blockId) : updated;
+}
+
+export function insertLineAfterFrontmatter(content: string, line: string): string {
+  const newline = content.includes('\r\n') ? '\r\n' : '\n';
+  const cleanLine = String(line || '').trim();
+  if (!cleanLine) return content;
+  const trimmed = String(content || '').replace(/\s+$/g, '');
+  return trimmed ? `${trimmed}${newline}${cleanLine}${newline}` : `${cleanLine}${newline}`;
+}
+
+export function findAfterFrontmatterIndex(lines: string[]): number {
+  if (lines[0]?.trim() !== '---') return 0;
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i]?.trim() === '---') return i + 1;
+  }
+  return 0;
+}
+
+export function stripTaskMetadata(body: string): string {
+  const source = String(body || '');
+  return removeTaskTextRanges(source, getTaskMetadataRanges(source), ' ')
+    .replace(/<!--\s*-->/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function stripTaskInlinePropsMetadata(value: string): string {
+  TPS_INLINE_METADATA_RE.lastIndex = 0;
+  const stripped = String(value || '').replace(TPS_INLINE_METADATA_RE, ' ');
+  TPS_INLINE_METADATA_RE.lastIndex = 0;
+  return stripped.replace(/[ \t]+$/gm, '').trimEnd();
+}
+
+function setInlineFieldValueOnBody(body: string, key: string, value: string | null): string {
+  const cleanValue = String(value ?? '').trim();
+  const withoutExisting = removeInlineFieldFromBody(body, key);
+  if (!cleanValue) return withoutExisting;
+  return `${withoutExisting.trimEnd()} [${key}:: ${cleanValue}]`.trim();
+}
+
+function removeInlineFieldFromBody(body: string, key: string): string {
+  const normalizedKey = String(key || '').trim().toLowerCase();
+  if (!normalizedKey) return String(body || '').trimEnd();
+  const source = String(body || '');
+  const matches = readSemanticInlineFieldRanges(source)
+    .filter((field) => field.key.toLowerCase() === normalizedKey)
+    .map((field) => getInlineFieldRemovalRange(source, field));
+  return removeTaskTextRanges(source, matches)
+    .trim();
+}
+
+function extractTaskMetadata(body: string): string[] {
+  const source = String(body || '');
+  return getTaskMetadataRanges(source)
+    .map((range) => source.slice(range.start, range.end).trim())
+    .filter(Boolean);
+}
+
+function extractTpsInlineMetadata(body: string): string[] {
+  const source = String(body || '');
+  return getTaskInlinePropsMetadataRanges(source)
+    .map((range) => source.slice(range.start, range.end).trim())
+    .filter(Boolean);
+}
+
+function extractTaskEditorMetadata(body: string): string[] {
+  const source = String(body || '');
+  return getTaskEditorMetadataRanges(source)
+    .map((range) => source.slice(range.start, range.end).trim())
+    .filter(Boolean);
+}
+
+function stripTaskEditorMetadata(body: string): string {
+  const source = String(body || '');
+  return removeTaskTextRanges(source, getTaskEditorMetadataRanges(source), ' ')
+    .replace(/<!--\s*-->/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getTaskEditorMetadataRanges(body: string): TaskTextRange[] {
+  const source = String(body || '');
+  return normalizeTaskTextRanges([
+    ...readSemanticInlineFieldRanges(source),
+    ...getTaskInlinePropsMetadataRanges(source),
+    ...getLineBlockIdRanges(source),
+  ]);
+}
+
+type TaskTextRange = {
+  start: number;
+  end: number;
+};
+
+type TaskTagTextRange = TaskTextRange & {
+  tag: string;
+};
+
+function scanTaskInlineFields(value: string): TaskInlineFieldRange[] {
+  const source = String(value || '');
+  const fields: TaskInlineFieldRange[] = [];
+  for (let index = 0; index < source.length; index += 1) {
+    const open = source[index];
+    if (open !== '[' && open !== '(') continue;
+    if (index > 0 && !/\s/u.test(source[index - 1] || '')) continue;
+
+    const close = open === '[' ? ']' : ')';
+    let cursor = index + 1;
+    while (/\s/u.test(source[cursor] || '')) cursor += 1;
+    const keyStart = cursor;
+    while (/[A-Za-z0-9_.-]/u.test(source[cursor] || '')) cursor += 1;
+    const key = source.slice(keyStart, cursor);
+    if (!key) continue;
+    while (/\s/u.test(source[cursor] || '')) cursor += 1;
+    if (source.slice(cursor, cursor + 2) !== '::') continue;
+    cursor += 2;
+    const valueStart = cursor;
+    let depth = 1;
+    let end = -1;
+    for (; cursor < source.length; cursor += 1) {
+      const character = source[cursor];
+      if (character === '\\') {
+        cursor += 1;
+        continue;
+      }
+      if (character === open) {
+        depth += 1;
+        continue;
+      }
+      if (character !== close) continue;
+      depth -= 1;
+      if (depth === 0) {
+        end = cursor + 1;
+        break;
+      }
+    }
+    if (end < 0) continue;
+    fields.push({
+      start: index,
+      end,
+      key,
+      value: source.slice(valueStart, end - 1).trim(),
+    });
+    index = end - 1;
+  }
+  return fields;
+}
+
+function getTaskMetadataRanges(value: string): TaskTextRange[] {
+  const source = String(value || '');
+  const hidden = getTaskInlinePropsMetadataRanges(source);
+  const fields = readSemanticInlineFieldRanges(source)
+    .filter((field) => !['tpsinlineprops', 'tps-inline-props'].includes(field.key.toLowerCase()));
+  const tags = getVisibleTaskTagRanges(source);
+  return normalizeTaskTextRanges([...hidden, ...fields, ...tags, ...getLineBlockIdRanges(source)]);
+}
+
+function getLineBlockIdRanges(value: string): TaskTextRange[] {
+  const source = String(value || '');
+  const match = source.match(LINE_BLOCK_ID_RE);
+  if (!match || match.index === undefined) return [];
+  return [{ start: match.index, end: source.length }];
+}
+
+function getTaskInlinePropsMetadataRanges(value: string): TaskTextRange[] {
+  const source = String(value || '');
+  const ranges: TaskTextRange[] = [];
+  TPS_INLINE_METADATA_RE.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = TPS_INLINE_METADATA_RE.exec(source)) !== null) {
+    ranges.push({ start: match.index, end: match.index + String(match[0] || '').length });
+  }
+  TPS_INLINE_METADATA_RE.lastIndex = 0;
+  return ranges;
+}
+
+function getVisibleTaskTagRanges(
+  value: string,
+  semanticFields: readonly TaskInlineFieldRange[] = readSemanticInlineFieldRanges(String(value || '')),
+): TaskTagTextRange[] {
+  const source = String(value || '');
+  const protectedRanges = getTaskInlinePropsMetadataRanges(source);
+  const excludedRanges = normalizeTaskTextRanges([
+    ...protectedRanges,
+    ...semanticFields,
+    ...getHtmlCommentRanges(source),
+    ...getClosedInlineCodeRanges(source),
+  ]);
+  const ranges: TaskTagTextRange[] = [];
+  TAG_GLOBAL_RE.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = TAG_GLOBAL_RE.exec(source)) !== null) {
+    const raw = String(match[0] || '');
+    const rawTag = String(match[1] || '');
+    const offset = raw.lastIndexOf(rawTag);
+    const start = match.index + Math.max(0, offset);
+    const end = start + rawTag.length;
+    if (isTextRangeContainedByAny({ start, end }, excludedRanges)) continue;
+    const tag = normalizeInlineTag(rawTag);
+    if (tag) ranges.push({ start, end, tag });
+  }
+  TAG_GLOBAL_RE.lastIndex = 0;
+  return ranges;
+}
+
+function getTagRemovalRange(source: string, range: TaskTagTextRange): TaskTextRange {
+  if (/[ \t]/u.test(source[range.end] || '')) {
+    return { start: range.start, end: range.end + 1 };
+  }
+  if (range.start > 0 && /[ \t]/u.test(source[range.start - 1] || '')) {
+    return { start: range.start - 1, end: range.end };
+  }
+  return { start: range.start, end: range.end };
+}
+
+function getInlineFieldRemovalRange(
+  source: string,
+  range: TaskInlineFieldRange,
+): TaskTextRange {
+  if (/[ \t]/u.test(source[range.end] || '')) {
+    return { start: range.start, end: range.end + 1 };
+  }
+  if (range.start > 0 && /[ \t]/u.test(source[range.start - 1] || '')) {
+    return { start: range.start - 1, end: range.end };
+  }
+  return { start: range.start, end: range.end };
+}
+
+function getClosedInlineCodeRanges(source: string): TaskTextRange[] {
+  const ranges: TaskTextRange[] = [];
+  for (let index = 0; index < source.length;) {
+    if (source[index] !== '`' || isEscapedMarkdownCharacter(source, index)) {
+      index += 1;
+      continue;
+    }
+
+    let markerLength = 1;
+    while (source[index + markerLength] === '`') markerLength += 1;
+    let cursor = index + markerLength;
+    let close = -1;
+    while (cursor < source.length) {
+      if (source[cursor] !== '`') {
+        cursor += 1;
+        continue;
+      }
+      let candidateLength = 1;
+      while (source[cursor + candidateLength] === '`') candidateLength += 1;
+      if (candidateLength === markerLength) {
+        close = cursor;
+        break;
+      }
+      cursor += candidateLength;
+    }
+
+    if (close < 0) {
+      index += markerLength;
+      continue;
+    }
+    ranges.push({ start: index, end: close + markerLength });
+    index = close + markerLength;
+  }
+  return ranges;
+}
+
+function isEscapedMarkdownCharacter(source: string, index: number): boolean {
+  let slashCount = 0;
+  for (let cursor = index - 1; cursor >= 0 && source[cursor] === '\\'; cursor -= 1) {
+    slashCount += 1;
+  }
+  return slashCount % 2 === 1;
+}
+
+function getHtmlCommentRanges(source: string): TaskTextRange[] {
+  const ranges: TaskTextRange[] = [];
+  const pattern = /<!--[\s\S]*?-->/gu;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(source)) !== null) {
+    ranges.push({
+      start: match.index,
+      end: match.index + String(match[0] || '').length,
+    });
+  }
+  return ranges;
+}
+
+function isTextRangeContainedByAny(
+  range: TaskTextRange,
+  containers: readonly TaskTextRange[],
+): boolean {
+  return containers.some(
+    (container) => range.start >= container.start && range.end <= container.end,
+  );
+}
+
+function normalizeTaskTextRanges(ranges: TaskTextRange[]): TaskTextRange[] {
+  const sorted = ranges
+    .filter((range) => Number.isFinite(range.start) && Number.isFinite(range.end) && range.end > range.start)
+    .sort((left, right) => left.start - right.start || right.end - left.end);
+  const output: TaskTextRange[] = [];
+  for (const range of sorted) {
+    const previous = output[output.length - 1];
+    if (previous && range.start < previous.end) {
+      if (range.end > previous.end) previous.end = range.end;
+      continue;
+    }
+    output.push({ start: range.start, end: range.end });
+  }
+  return output;
+}
+
+function removeTaskTextRanges(value: string, ranges: TaskTextRange[], replacement = ''): string {
+  const source = String(value || '');
+  const normalized = normalizeTaskTextRanges(ranges);
+  if (!normalized.length) return source;
+  let cursor = 0;
+  let output = '';
+  for (const range of normalized) {
+    output += source.slice(cursor, range.start);
+    output += replacement;
+    cursor = range.end;
+  }
+  return `${output}${source.slice(cursor)}`;
+}
+
+function normalizeCheckboxToken(token: string): string {
+  const raw = String(token || '').trim();
+  if (/^\[[^\]\r\n]?\]$/.test(raw)) return raw;
+  if (raw.length <= 1) return `[${raw || ' '}]`;
+  return '';
+}
+
+function normalizeCheckboxMarker(value: string): string {
+  return normalizeLinkedSubitemCheckboxMarker(value) ?? '';
+}
+
+function normalizeCompleteMarkers(markers: string[] | undefined): Set<string> {
+  const values = Array.isArray(markers) ? markers : ['x', 'X'];
+  return new Set(values.map((marker) => normalizeCheckboxMarker(marker)).filter(Boolean));
+}
+
+function formatTaskLineDate(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return [
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
+    `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`,
+  ].join(' ');
+}
+
+function formatTaskLineTimestamp(date: Date, format: string | undefined): string {
+  const momentFactory = (globalThis as any)?.window?.moment || (globalThis as any)?.moment;
+  if (typeof momentFactory === 'function') {
+    try {
+      return momentFactory(date).format(String(format || '').trim() || 'YYYY-MM-DD HH:mm:ss');
+    } catch (_error) {
+      return formatTaskLineDate(date);
+    }
+  }
+  return formatTaskLineDate(date);
+}
+
+function normalizeInlineFieldKey(key: string): string {
+  return String(key || '').trim().replace(/\s+/g, '');
+}
+
+function normalizeInlineTag(tag: string): string {
+  return String(tag || '')
+    .trim()
+    .replace(/^#+/u, '')
+    .replace(/^[\[\]`"'(){}]+|[\[\]`"'(){}]+$/gu, '')
+    .replace(/[.,;:!?]+$/gu, '')
+    .replace(/[^\p{L}\p{N}_/-]/gu, '')
+    .replace(/^\/+|\/+$/gu, '');
+}
+
+type TaskInlinePropsJsonBlock = {
+  payloadStart: number;
+  payloadEnd: number;
+  value: Record<string, unknown>;
+  encoding: TaskInlinePropsEncoding;
+};
+
+type TaskInlinePropsEncoding = 'json' | 'uri-json' | 'html-json';
+
+type TaskInlinePropsCarrier = {
+  pattern: RegExp;
+  payloadGroup: number;
+};
+
+function getTaskInlinePropsJsonBlocks(line: string): TaskInlinePropsJsonBlock[] {
+  const source = String(line || '');
+  const blocks: TaskInlinePropsJsonBlock[] = [];
+  const carriers: TaskInlinePropsCarrier[] = [
+    { pattern: /%%\s*tps-inline-props\s*:\s*([\s\S]*?)\s*%%/giu, payloadGroup: 1 },
+    { pattern: /<!--\s*tps-inline-props\s*:\s*([\s\S]*?)\s*-->/giu, payloadGroup: 1 },
+    { pattern: /\[(?:tpsInlineProps|tps-inline-props)\s*::\s*([^\]]+)\]/giu, payloadGroup: 1 },
+    { pattern: /\bdata-tps-inline-props\s*=\s*(["'])([\s\S]*?)\1/giu, payloadGroup: 2 },
+  ];
+  for (const { pattern, payloadGroup } of carriers) {
+    pattern.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(source)) !== null) {
+      const rawPayload = String(match[payloadGroup] || '');
+      const parsed = parseTaskInlinePropsPayload(rawPayload);
+      if (!parsed) continue;
+      const payloadOffset = match[0].indexOf(rawPayload);
+      if (payloadOffset < 0) continue;
+      const payloadStart = (match.index || 0) + payloadOffset;
+      blocks.push({
+        payloadStart,
+        payloadEnd: payloadStart + rawPayload.length,
+        value: parsed.value,
+        encoding: parsed.encoding,
+      });
+    }
+    pattern.lastIndex = 0;
+  }
+  return blocks.sort((a, b) => a.payloadStart - b.payloadStart);
+}
+
+function parseTaskInlinePropsPayload(rawPayload: string): { value: Record<string, unknown>; encoding: TaskInlinePropsEncoding } | null {
+  const raw = String(rawPayload || '').trim();
+  if (!raw) return null;
+  const direct = parseJsonRecord(raw);
+  if (direct) return { value: direct, encoding: 'json' };
+
+  const htmlDecoded = decodeTaskInlinePropsHtml(raw);
+  if (htmlDecoded !== raw) {
+    const htmlRecord = parseJsonRecord(htmlDecoded);
+    if (htmlRecord) return { value: htmlRecord, encoding: 'html-json' };
+  }
+
+  let decoded = htmlDecoded;
+  for (let index = 0; index < 2; index += 1) {
+    let next = decoded;
+    try {
+      next = decodeURIComponent(decoded);
+    } catch {
+      return null;
+    }
+    if (next === decoded) return null;
+    const uriRecord = parseJsonRecord(next);
+    if (uriRecord) return { value: uriRecord, encoding: 'uri-json' };
+    decoded = next;
+  }
+  return null;
+}
+
+function parseJsonRecord(value: string): Record<string, unknown> | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+  return parsed as Record<string, unknown>;
+}
+
+function serializeTaskInlinePropsPayload(value: Record<string, unknown>, encoding: TaskInlinePropsEncoding): string {
+  const json = JSON.stringify(value);
+  if (encoding === 'uri-json') return encodeURIComponent(json);
+  if (encoding === 'html-json') return encodeTaskInlinePropsHtml(json);
+  return json;
+}
+
+function decodeTaskInlinePropsHtml(value: string): string {
+  return String(value || '')
+    .replace(/&quot;|&#34;|&#x22;/giu, '"')
+    .replace(/&#39;|&#x27;|&apos;/giu, "'")
+    .replace(/&lt;/giu, '<')
+    .replace(/&gt;/giu, '>')
+    .replace(/&amp;/giu, '&');
+}
+
+function encodeTaskInlinePropsHtml(value: string): string {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function findCaseInsensitiveRecordKey(value: Record<string, unknown>, key: string): string {
+  const wanted = String(key || '').trim().toLowerCase();
+  return Object.keys(value || {}).find((candidate) => candidate.trim().toLowerCase() === wanted) || '';
+}
+
+function replaceTaskTitlePreservingMetadata(line: string, title: string): string {
+  const parsed = parseTaskLine(line);
+  if (!parsed) return line;
+  const cleanTitle = String(title || '').replace(/\s+/g, ' ').trim();
+  if (!cleanTitle) return line;
+  const metadata = extractTaskMetadata(parsed.body);
+  return `${parsed.prefix}${parsed.token} ${cleanTitle}${metadata.length ? ` ${metadata.join(' ')}` : ''}`.trimEnd();
+}
+
+function resolveTaskAssociationForEdit(line: string, nextTitleOrBody: string): string {
+  const stored = readTaskAssociatedNotePath(line);
+  if (stored) return stored;
+  const sourceLegacy = parseTaskTitleLink(getTaskSourceTitle(line))?.targetPath || '';
+  if (sourceLegacy) return sourceLegacy;
+  const candidate = String(nextTitleOrBody || '').replace(/\r?\n/g, ' ').trim();
+  if (!candidate) return '';
+  const candidateLine = parseTaskLine(candidate) ? candidate : `- [ ] ${candidate}`;
+  return parseTaskTitleLink(getTaskSourceTitle(candidateLine))?.targetPath || '';
+}
+
+function normalizeLeadingLinkedTaskTitle(value: string): string {
+  const title = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!title) return '';
+  return parseLeadingTaskTitleLink(title)?.displayTitle || title;
+}
+
+function unwrapTaskTitleLinks(value: string): string {
+  const withoutWikiLinks = String(value || '').replace(/!?\[\[([^\]]+)\]\]/gu, (_raw, innerValue: string) => {
+    const inner = String(innerValue || '').trim();
+    const pipeIndex = inner.indexOf('|');
+    const target = (pipeIndex >= 0 ? inner.slice(0, pipeIndex) : inner).trim();
+    const alias = (pipeIndex >= 0 ? inner.slice(pipeIndex + 1) : '').trim();
+    return alias || taskLinkTargetBasename(target);
+  });
+  return unwrapTaskMarkdownLinks(withoutWikiLinks);
+}
+
+type ParsedTaskMarkdownLink = {
+  label: string;
+  target: string;
+  end: number;
+};
+
+function unwrapTaskMarkdownLinks(value: string): string {
+  const source = String(value || '');
+  let output = '';
+  let cursor = 0;
+  while (cursor < source.length) {
+    const link = parseTaskMarkdownLinkAt(source, cursor);
+    if (!link) {
+      output += source[cursor] || '';
+      cursor += 1;
+      continue;
+    }
+    output += link.label.trim() || taskLinkTargetBasename(link.target);
+    cursor = link.end;
+  }
+  return output;
+}
+
+function parseTaskMarkdownLinkAt(value: string, start: number): ParsedTaskMarkdownLink | null {
+  const source = String(value || '');
+  let labelStart = start;
+  if (source[labelStart] === '!') labelStart += 1;
+  if (source[labelStart] !== '[' || source[labelStart + 1] === '[') return null;
+  const labelEnd = findMatchingTaskDelimiter(source, labelStart, '[', ']');
+  if (labelEnd < 0 || source[labelEnd + 1] !== '(') return null;
+  const targetStart = labelEnd + 1;
+  const targetEnd = findMatchingTaskDelimiter(source, targetStart, '(', ')');
+  if (targetEnd < 0) return null;
+  return {
+    label: source.slice(labelStart + 1, labelEnd),
+    target: source.slice(targetStart + 1, targetEnd).trim(),
+    end: targetEnd + 1,
+  };
+}
+
+function findMatchingTaskDelimiter(
+  value: string,
+  start: number,
+  open: string,
+  close: string,
+): number {
+  const source = String(value || '');
+  if (source[start] !== open) return -1;
+  let depth = 0;
+  for (let index = start; index < source.length; index += 1) {
+    const character = source[index];
+    if (character === '\\') {
+      index += 1;
+      continue;
+    }
+    if (character === open) depth += 1;
+    else if (character === close) depth -= 1;
+    if (depth === 0) return index;
+  }
+  return -1;
+}
+
+type LeadingTaskTitleLink = {
+  rawTarget: string;
+  displayTitle: string;
+};
+
+function parseLeadingTaskTitleLink(rawTitle: string): LeadingTaskTitleLink | null {
+  const title = String(rawTitle || '').replace(/\s+/g, ' ').trim();
+  if (!title) return null;
+
+  const wikiMatch = title.match(/^!?\[\[([^\]]+)\]\](?:\s+([\s\S]+))?$/u);
+  if (wikiMatch) {
+    const inner = String(wikiMatch[1] || '').trim();
+    const pipeIndex = inner.indexOf('|');
+    const rawTarget = (pipeIndex >= 0 ? inner.slice(0, pipeIndex) : inner).trim();
+    const alias = (pipeIndex >= 0 ? inner.slice(pipeIndex + 1) : '').trim();
+    const label = alias || taskLinkTargetBasename(rawTarget);
+    return {
+      rawTarget,
+      displayTitle: joinTaskTitleParts(label, wikiMatch[2]),
+    };
+  }
+
+  const markdownLink = parseTaskMarkdownLinkAt(title, 0);
+  if (!markdownLink) return null;
+  const remainder = title.slice(markdownLink.end);
+  if (remainder && !/^\s/u.test(remainder)) return null;
+  return {
+    rawTarget: markdownLink.target,
+    displayTitle: joinTaskTitleParts(markdownLink.label || taskLinkTargetBasename(markdownLink.target), remainder),
+  };
+}
+
+function joinTaskTitleParts(label: unknown, trailing: unknown): string {
+  return [String(label || '').trim(), String(trailing || '').trim()]
+    .filter(Boolean)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function isExternalTaskLinkTarget(value: string): boolean {
+  let target = String(value || '').trim();
+  if (target.startsWith('<') && target.endsWith('>')) target = target.slice(1, -1).trim();
+  const isExternal = (candidate: string) => /^[A-Za-z][A-Za-z0-9+.-]*:/.test(candidate) || candidate.startsWith('//');
+  if (isExternal(target)) return true;
+  try {
+    target = decodeURIComponent(target);
+  } catch {
+    return false;
+  }
+  return isExternal(target);
+}
+
+function taskLinkTargetBasename(value: string): string {
+  let target = String(value || '').trim();
+  if (target.startsWith('<') && target.endsWith('>')) target = target.slice(1, -1).trim();
+  target = target.split('#')[0]?.trim() || '';
+  try {
+    target = decodeURIComponent(target);
+  } catch {
+    // Preserve literal link text with malformed escapes.
+  }
+  target = target.replace(/\.md$/i, '');
+  return target.split('/').pop()?.trim() || target;
+}

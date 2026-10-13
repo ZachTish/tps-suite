@@ -1,0 +1,794 @@
+.tps-controller-rule-fields select, .tps-controller-rule-toolbar select {
+ appearance:auto; text-align:start; background-color:var(--background-modifier-form-field); color:var(--text-normal);
+ border:1px solid var(--background-modifier-border); border-radius:6px; padding:6px 8px; height:auto; min-height:36px;
+}
+@media (max-width:600px) {
+ .tps-controller-rule-fields input, .tps-controller-rule-fields select, .tps-controller-rule-toolbar input, .tps-controller-rule-toolbar select { min-height:44px; }
+}
+.tps-controller-rule-modal [hidden] { display: none !important; }
+/* Command-driven note rules. All selectors belong to Controller. */
+.tps-controller-rule-toolbar, .tps-controller-rule-card { display:flex; flex-wrap:wrap; gap:8px; margin-block:12px; align-items:center; }
+.tps-controller-note-rules button, .tps-controller-rule-modal button { height:auto; min-height:36px; white-space:normal; }
+.tps-controller-rule-card > button:first-child { flex:1; text-align:left; min-width:120px; }
+.tps-controller-rule-card [aria-pressed="true"] { box-shadow:inset 3px 0 var(--interactive-accent); }
+.tps-controller-rule-fields { display:flex; flex-wrap:wrap; gap:8px; padding:12px 0; border-bottom:1px solid var(--background-modifier-border); }
+.tps-controller-rule-fields input, .tps-controller-rule-fields select { flex:1 1 130px; min-width:0; max-width:100%; }
+.tps-controller-rule-editor { margin-top:20px; }
+.tps-controller-rule-status { min-height:1.6em; color:var(--text-muted); }
+.tps-controller-rule-modal { width:min(850px, 94vw); }
+.tps-controller-rule-preview-card { border:1px solid var(--background-modifier-border); border-radius:8px; padding:12px; margin-block:10px; overflow-wrap:anywhere; }
+.tps-controller-rule-preview-card label { display:flex; align-items:center; gap:8px; font-weight:600; }
+.tps-controller-rule-error { color:var(--text-error); }
+.tps-controller-note-rules :focus-visible, .tps-controller-rule-modal :focus-visible { outline:2px solid var(--interactive-accent); outline-offset:2px; }
+@media (max-width:600px) {
+ .tps-controller-note-rules .setting-item { flex-direction:column; align-items:stretch; gap:8px; }
+ .tps-controller-note-rules .setting-item-control { justify-content:flex-start; }
+ .tps-controller-rule-fields { display:grid; grid-template-columns:minmax(0,1fr); }
+ .tps-controller-note-rules button, .tps-controller-rule-modal button { min-height:44px; }
+ .tps-controller-rule-toolbar input, .tps-controller-rule-toolbar select { min-width:0; max-width:100%; }
+}
+
+/* TPS Controller Mode - Status Indicator */
+
+/* Controller mode runs automation, but it must not hide normal Obsidian editing UI. */
+body.tps-controller-mode {
+    /* Keep status bar visible so user can see controller status */
+    .status-bar {
+        display: flex !important;
+    }
+
+    /* Add a small non-blocking status badge. */
+    .workspace::before {
+        content: 'CONTROLLER';
+        position: fixed;
+        right: 12px;
+        bottom: 28px;
+        z-index: 50;
+        padding: 2px 7px;
+        border: 1px solid var(--background-modifier-border);
+        border-radius: 6px;
+        background: var(--background-secondary);
+        color: var(--text-muted);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        pointer-events: none;
+        opacity: 0.72;
+    }
+}
+
+/* =======================================================================
+   Settings Tab Styles
+   ======================================================================= */
+
+/* ── Collapsible Settings Sections ─────────────────────────────────────── */
+
+.tps-collapsible-section {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.tps-collapsible-section-summary {
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+  list-style: none;
+}
+
+.tps-collapsible-section-summary::-webkit-details-marker {
+  display: none;
+}
+
+.tps-collapsible-section-summary::before {
+  content: '▶';
+  font-size: 0.65em;
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.tps-collapsible-section[open] > .tps-collapsible-section-summary::before {
+  transform: rotate(90deg);
+}
+
+.tps-collapsible-section-summary:hover {
+  color: var(--interactive-accent);
+}
+
+.tps-collapsible-section[open] > .tps-collapsible-section-summary {
+  margin-bottom: 8px;
+}
+
+.tps-collapsible-section-title { flex: 1; }
+
+.tps-collapsible-section-description {
+  margin: 4px 0 8px 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.tps-collapsible-section-content { padding-top: 4px; }
+
+/* Nested subsections */
+.tps-collapsible-subsection {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  background: color-mix(in srgb, var(--background-secondary) 40%, transparent);
+}
+
+.tps-collapsible-subsection > summary {
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tps-collapsible-subsection > summary:hover {
+  color: var(--interactive-accent);
+}
+
+/* ── Device Role description ────────────────────────────────────────────── */
+
+.tps-controller-role-desc {
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--background-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.tps-role-controller {
+  color: var(--text-success);
+  font-weight: bold;
+}
+
+.tps-role-user {
+  color: var(--text-muted);
+  font-weight: bold;
+}
+
+.tps-role-hint {
+  color: var(--text-muted);
+}
+
+/* ── Reminder Rules ─────────────────────────────────────────────────────── */
+
+.tps-controller-reminder-rule {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  background: color-mix(in srgb, var(--background-secondary) 28%, transparent);
+}
+
+.tps-controller-reminder-rule > summary {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  list-style: none;
+}
+
+.tps-controller-reminder-rule > summary::-webkit-details-marker {
+  display: none;
+}
+
+.tps-rule-summary-main {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+  flex: 1;
+}
+
+.tps-rule-label {
+  font-weight: 600;
+}
+
+.tps-rule-desc {
+  color: var(--text-muted);
+  font-size: 0.85em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.tps-rule-summary-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tps-rule-summary-btn {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 5px;
+  background: var(--background-primary);
+  color: var(--text-muted);
+  padding: 2px 6px;
+  cursor: pointer;
+  line-height: 1.1;
+}
+
+.tps-rule-summary-btn:hover {
+  color: var(--text-normal);
+  border-color: var(--interactive-accent);
+}
+
+.tps-rule-content {
+  margin-top: 10px;
+}
+
+.tps-reminder-rules-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.tps-reminder-rules-filter {
+  flex: 1;
+  min-width: 220px;
+}
+
+.tps-reminder-rules-toolbar-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* Flat groups inside a reminder rule keep the overall settings hierarchy at two levels. */
+.tps-rule-group {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+
+.tps-rule-group-heading {
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.tps-rule-group-content {
+  margin-top: 0;
+}
+
+/* ── Empty state ────────────────────────────────────────────────────────── */
+
+.tps-empty-state {
+  padding: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+
+.tps-controller-reschedule-actions .setting-item-control { flex-wrap: wrap; }
+.tps-controller-reschedule-actions button { height: auto; min-height: 32px; white-space: normal; }
+.tps-controller-reschedule-action { margin-block: 12px; padding: 8px; border: 1px solid var(--background-modifier-border); border-radius: 6px; }
+.tps-controller-reschedule-actions :focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 2px; }
+@media (max-width: 600px) {
+  .tps-controller-reschedule-actions .setting-item { flex-direction: column; align-items: stretch; gap: 8px; }
+  .tps-controller-reschedule-actions .setting-item-control { justify-content: flex-start; }
+  .tps-controller-reschedule-actions input, .tps-controller-reschedule-actions select { width: 100%; min-height: 40px; }
+  .tps-controller-reschedule-actions button { min-height: 40px; }
+}
+
+/* =======================================================================
+   BRAT compatibility mirror
+
+   BRAT and Obsidian install only styles.css. Keep this complete mirror of
+   styles-ui.css here so release installs do not depend on an extra runtime
+   stylesheet. styles-ui.css remains in source for legacy/local deployment.
+   ======================================================================= */
+
+/* TPS Controller - UI Shared Styles */
+
+/* ============================================================================
+   Collapsible Sections
+   ============================================================================ */
+
+.tps-collapsible-section {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: transparent;
+}
+
+.tps-collapsible-section[open] {
+  padding: 12px;
+}
+
+.tps-collapsible-section-summary {
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px;
+  margin: -4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}
+
+.tps-collapsible-section-summary:hover {
+  color: var(--interactive-accent-hover);
+}
+
+.tps-collapsible-section-icon {
+  display: inline-block;
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.tps-collapsible-section-title {
+  flex: 1;
+}
+
+.tps-collapsible-section-description {
+  margin: 8px 0 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.tps-collapsible-section[open] > .tps-collapsible-section-summary {
+  margin-bottom: 8px;
+}
+
+.tps-collapsible-section-content {
+  padding-left: 4px;
+  padding-right: 4px;
+  padding-top: 8px;
+}
+
+/* ============================================================================
+   List Rendering & Cards
+   ============================================================================ */
+
+.tps-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tps-list-empty-state {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+  border: 1px dashed var(--background-modifier-border);
+  border-radius: 6px;
+}
+
+.tps-card {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 12px;
+  background: var(--background-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tps-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.tps-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tps-card-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.tps-card-status {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.tps-card-controls {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.tps-card-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-primary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-normal);
+  transition: all 0.2s ease;
+}
+
+.tps-card-btn:hover:not(:disabled) {
+  background: var(--background-modifier-hover);
+  border-color: var(--interactive-accent);
+  color: var(--interactive-accent);
+}
+
+.tps-card-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tps-card-btn-danger {
+  color: var(--text-error);
+}
+
+.tps-card-btn-danger:hover:not(:disabled) {
+  background: rgba(var(--text-error-rgb), 0.1);
+  border-color: var(--text-error);
+}
+
+/* ============================================================================
+   Routed Settings Hub
+   ============================================================================ */
+
+.tps-settings-destination-hub {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin: 16px 0 20px;
+  padding: 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 10px;
+  background: var(--background-secondary);
+}
+
+.tps-settings-inline-selector {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 6px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 9px;
+  background: var(--background-secondary);
+}
+
+.tps-settings-inline-selector-button {
+  flex: 1 1 0;
+  min-width: 0;
+  white-space: normal;
+}
+
+.tps-settings-inline-selector-button[aria-pressed="true"] {
+  border-color: var(--interactive-accent);
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  font-weight: 650;
+}
+
+.tps-settings-inline-selector-button:focus-visible,
+.tps-settings-destination-button:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+.tps-settings-destination-heading {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+}
+
+.tps-settings-destination-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tps-settings-destination-button {
+  min-width: 0;
+  min-height: 64px;
+  height: auto;
+  padding: 9px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  text-align: left;
+  white-space: normal;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  background: var(--background-primary);
+}
+
+.tps-settings-destination-button:hover {
+  border-color: var(--interactive-accent);
+}
+
+.tps-settings-destination-button[aria-pressed="true"] {
+  border-color: var(--interactive-accent);
+  background: var(--background-modifier-hover);
+  box-shadow: inset 3px 0 0 var(--interactive-accent);
+}
+
+.tps-settings-destination-label {
+  color: var(--text-normal);
+  font-weight: 650;
+}
+
+.tps-settings-destination-description {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.tps-settings-page-heading {
+  margin: 0 0 14px;
+  scroll-margin-top: 110px;
+}
+
+.tps-settings-page-heading h2 {
+  margin: 0 0 4px;
+}
+
+.tps-settings-page-heading p {
+  margin: 0;
+}
+
+.tps-settings-section {
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 9px;
+}
+
+.tps-settings-section-title {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+
+.tps-settings-section-description {
+  margin: 0 0 8px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.tps-settings-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.tps-settings-overview-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 9px;
+  background: var(--background-secondary);
+}
+
+.tps-settings-overview-card h3 {
+  margin: 0 0 4px;
+}
+
+.tps-settings-overview-card p {
+  flex: 1;
+  margin: 0 0 10px;
+}
+
+.tps-calendar-feed-list {
+  margin-top: 8px;
+}
+
+.tps-calendar-feed-card {
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  background: var(--background-primary-alt);
+}
+
+.tps-calendar-feed-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.tps-calendar-feed-identity {
+  display: flex;
+  flex: 1 1 220px;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.tps-calendar-feed-identity strong,
+.tps-calendar-feed-summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tps-calendar-feed-summary {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.tps-calendar-feed-editor {
+  margin-top: 10px;
+  padding-top: 4px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.tps-calendar-feed-output {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+}
+
+.tps-calendar-feed-output h4 {
+  margin: 0 0 4px;
+}
+
+@media (max-width: 900px) {
+  .tps-settings-destination-grid {
+    grid-template-columns: repeat(7, minmax(132px, 1fr));
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .tps-settings-overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .tps-settings-destination-hub {
+    padding: 8px;
+  }
+
+  .tps-settings-destination-button {
+    min-height: 0;
+    padding: 7px 9px;
+  }
+
+  .tps-settings-destination-description {
+    display: none;
+  }
+
+  .tps-settings-inline-selector {
+    flex-direction: column;
+  }
+
+  .tps-calendar-feed-header > button {
+    flex: 1 1 auto;
+  }
+
+  .tps-reminder-rules-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .tps-reminder-rules-filter {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+.tps-controller-reminder-delivery-status {
+  margin: 0 0 16px;
+  overflow-wrap: anywhere;
+  padding: 8px 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 7px;
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: 1.35;
+}
+
+/* Attachment sync owns this namespace; no other plugin's settings are affected. */
+.tps-controller-attachment-sync-status {
+    padding: 0.75em;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    margin-bottom: 0.75em;
+    overflow-wrap: anywhere;
+}
+.tps-controller-attachment-sync-settings button {
+    height: auto;
+    min-height: 32px;
+    white-space: normal;
+}
+.tps-controller-attachment-sync-settings button:focus-visible,
+.tps-controller-attachment-sync-settings summary:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: 2px;
+}
+.tps-controller-attachment-sync-settings .setting-item-control {
+    flex-wrap: wrap;
+    gap: 0.5em;
+}
+.tps-controller-attachment-sync-migration,
+.tps-controller-attachment-sync-warnings {
+    overflow-wrap: anywhere;
+}
+.tps-controller-attachment-sync-key {
+    width: 100%;
+    min-height: 6em;
+    resize: vertical;
+}
+@media (max-width: 600px) {
+    .tps-controller-attachment-sync-settings .setting-item {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 0.65em;
+    }
+    .tps-controller-attachment-sync-settings .setting-item-control {
+        justify-content: flex-start;
+        width: 100%;
+    }
+    .tps-controller-attachment-sync-settings input,
+    .tps-controller-attachment-sync-settings textarea {
+        width: 100%;
+        min-width: 0;
+    }
+    .tps-controller-attachment-sync-settings button {
+        min-height: 40px;
+    }
+}
+
+/* Connection ownership hub: one selected provider, no persisted navigation state. */
+.tps-controller-connections-selector { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 12px; }
+.tps-controller-connections-selector button { height: auto; min-height: 36px; flex: 0 0 auto; }
+.tps-controller-connections-selector button[aria-pressed="true"] { background: var(--interactive-accent); color: var(--text-on-accent); }
+.tps-controller-connections-selector button:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 2px; }
+.tps-controller-connections-content { min-width: 0; }
+.tps-controller-connections-content summary { cursor: pointer; padding: 12px 0; }
+.tps-controller-connections-content .setting-item-control { flex-wrap: wrap; }
+@media (max-width: 600px) {
+  .tps-controller-connections-content .setting-item { flex-wrap: wrap; gap: 8px; }
+  .tps-controller-connections-content .setting-item-info { flex-basis: 100%; }
+  .tps-controller-connections-content .setting-item-control { max-width: 100%; justify-content: flex-start; }
+  .tps-controller-connections-content input { max-width: 100%; }
+  .tps-controller-connections-content button { height: auto; min-height: 36px; white-space: normal; }
+}
+
+/* Saved Base reminder selection: keep long vault paths usable on phones. */
+.tps-controller-reminder-base-selection .setting-item-control { min-width: 0; }
+.tps-controller-reminder-base-selection select { max-width: 100%; min-width: 0; }
+@media (max-width: 600px) {
+  .tps-controller-reminder-base-selection .setting-item { flex-direction: column; align-items: stretch; }
+  .tps-controller-reminder-base-selection .setting-item-control { width: 100%; justify-content: flex-start; }
+  .tps-controller-reminder-base-selection select { width: 100%; height: auto; min-height: 36px; }
+  .tps-controller-reminder-base-selection button { height: auto; min-height: 36px; }
+}

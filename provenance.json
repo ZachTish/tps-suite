@@ -1,0 +1,92 @@
+[
+  {
+    "module": "notes",
+    "sourceFolder": "TPS-Global-Context-Menu (Dev)",
+    "repository": "https://github.com/ZachTish/TPS-Global-Context-Menu.git",
+    "tag": "9.1.0",
+    "commit": "978dbfe763f5a1645e8899a7f0a4aac06d4950ac",
+    "legacyId": "tps-global-context-menu",
+    "minAppVersion": "1.10.0",
+    "files": 621
+  },
+  {
+    "module": "controller",
+    "sourceFolder": "TPS-Controller (Dev)",
+    "repository": "https://github.com/ZachTish/tps-controller.git",
+    "tag": "4.0.1",
+    "commit": "3021b12c0666b9e515e290b5434836eadb39fa64",
+    "legacyId": "tps-controller",
+    "minAppVersion": "1.12.3",
+    "files": 231
+  },
+  {
+    "module": "calendar",
+    "sourceFolder": "TPS-Calendar-Base (Dev)",
+    "repository": "https://github.com/ZachTish/tps-calendar-base.git",
+    "tag": "3.0.0",
+    "commit": "5bc95af2a979fe80082dbc2ea3f68f4a0a4f0267",
+    "legacyId": "tps-calendar-base",
+    "minAppVersion": "1.10.0",
+    "files": 205
+  },
+  {
+    "module": "health",
+    "sourceFolder": "TPS-health (Dev)",
+    "repository": "https://github.com/ZachTish/tps-health.git",
+    "tag": "5.1.1",
+    "commit": "3bad21a386a3be55bb7fb0d9c22c4519739dd6d1",
+    "legacyId": "tps-health",
+    "minAppVersion": "1.12.0",
+    "files": 246
+  },
+  {
+    "module": "finances",
+    "sourceFolder": "TPS-Finances (Dev)",
+    "repository": "https://github.com/ZachTish/tps-finances.git",
+    "tag": "5.0.0",
+    "commit": "734bc8da757997a7c8f39bcc4ab88df596779bc6",
+    "legacyId": "tps-finances",
+    "minAppVersion": "1.12.0",
+    "files": 108
+  },
+  {
+    "module": "linter",
+    "sourceFolder": "TPS-Linter (Dev)",
+    "repository": "https://github.com/ZachTish/tps-linter.git",
+    "tag": "0.8.0",
+    "commit": "e76f134506ea3b39a9fd558a037bac459ab3f139",
+    "legacyId": "tps-linter",
+    "minAppVersion": "1.10.0",
+    "files": 66
+  },
+  {
+    "module": "navigator",
+    "sourceFolder": "TPS-Notebook-Navigator (Dev)",
+    "repository": "https://github.com/ZachTish/tps-notebook-navigator.git",
+    "tag": "8.4.0",
+    "commit": "79aabf0d0f24169e1e2807d91bfd87127e83fa86",
+    "legacyId": "tps-notebook-navigator",
+    "minAppVersion": "1.11.0",
+    "files": 1188
+  },
+  {
+    "module": "notifier",
+    "sourceFolder": "tps-messager",
+    "repository": "https://github.com/ZachTish/tps-messager.git",
+    "tag": "1.1.5",
+    "commit": "2ee6f3d0953e8916fb5611564fde20efb002ffe9",
+    "legacyId": "tps-messager",
+    "minAppVersion": "1.10.0",
+    "files": 37
+  },
+  {
+    "module": "ai",
+    "sourceFolder": "tps-ai-gateway",
+    "repository": "https://github.com/ZachTish/tps-ai-gateway.git",
+    "tag": "0.10.0",
+    "commit": "959a48eb9c754e8521effa3dacb34f25c18f664c",
+    "legacyId": "tps-ai-gateway",
+    "minAppVersion": "1.12.0",
+    "files": 35
+  }
+]

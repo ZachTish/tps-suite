@@ -1,0 +1,38 @@
+.tps-suite-settings-routes,
+.tps-suite-settings-sections {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.tps-suite-settings button {
+  height: auto;
+  min-height: 40px;
+  white-space: normal;
+}
+.tps-suite-settings button[aria-pressed="true"] {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+.tps-suite-settings button:focus-visible,
+.tps-suite-settings input:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+.tps-suite-settings-search-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+@media (max-width: 600px) {
+  .tps-suite-settings-routes,
+  .tps-suite-settings-sections {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 4px;
+  }
+  .tps-suite-settings-routes button,
+  .tps-suite-settings-sections button { flex: 0 0 auto; }
+  .tps-suite-settings .setting-item { flex-direction: column; align-items: stretch; }
+  .tps-suite-settings .setting-item-control { width: 100%; flex-wrap: wrap; }
+}

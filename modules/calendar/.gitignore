@@ -1,0 +1,42 @@
+# vscode
+.vscode 
+
+# Intellij
+*.iml
+.idea
+
+# npm
+node_modules
+
+# Don't include the compiled files in the repo.
+# They should be uploaded to GitHub releases instead.
+main.js
+build/
+
+# Exclude sourcemaps
+*.map
+
+# obsidian
+data.json
+data.json.*
+
+# Runtime state
+.sync-request.json
+calendar-kanban-sync.json
+overdue-snapshot.json
+recurrence-session.json
+recurrence-create-state.json
+
+# Local credentials and generated test output
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+.test/
+coverage/
+
+# Exclude macOS Finder (System Explorer) View States
+.DS_Store

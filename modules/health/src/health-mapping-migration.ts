@@ -1,0 +1,178 @@
+import { App, Modal, Notice, Setting, TFile, getFrontMatterInfo, parseYaml } from 'obsidian';
+import type TPSHealthPlugin from './main';
+import type { TPSHealthSettings, HealthNativeRecordKindKey } from './types';
+import { HEALTH_MAPPING_KEYS, WORKOUT_TIMING_MAPPING_KEYS, type HealthMappingScope, mappingSnapshot, migrateHealthFrontmatter } from './health-mapping';
+import * as logger from './logger';
+import { assertHealthIdentityMappings } from './settings-normalization';
+
+type Change = { file: TFile; before: Record<string, unknown>; after: Record<string, unknown> };
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+async function readFrontmatter(app: App, file: TFile, identityKeys: string[]): Promise<Record<string, unknown>> {
+  const info = getFrontMatterInfo(await app.vault.read(file));
+  try {
+    const value = (info.exists ? parseYaml(info.frontmatter) : {}) ?? {};
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Expected a property map.');
+    return value;
+  } catch {
+    // An unrelated malformed note must not prevent a Health mapping change.
+    // Be conservative for possible identities, escaped keys, anchors or aliases.
+    const source = info.frontmatter || '';
+    const keyPattern = identityKeys.map(key => key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join('|');
+    const possibleIdentity = identityKeys.some(key => key.length > 2 && source.toLowerCase().includes(key.toLowerCase()))
+      || new RegExp(`(?:^|[\\r\\n{,])[ \t]*["']?(?:${keyPattern})["']?[ \t]*:`, 'i').test(source);
+    if (!possibleIdentity && !/[\\&*!]|<</.test(source)) return {};
+    throw new Error(`Repair invalid frontmatter before changing Health mappings: ${file.path}`);
+  }
+}
+
+class ConfirmMappingMigration extends Modal {
+  private accepted = false;
+  constructor(app: App, private label: string, private changes: Change[], private resolve: (value: boolean) => void) { super(app); }
+  onOpen(): void {
+    this.titleEl.setText('Update existing Health notes?');
+    this.contentEl.createEl('p', { text: this.label });
+    this.contentEl.createEl('p', { text: `${this.changes.length} existing notes will be updated, including archived notes. Old keys and values will be removed. No fallback aliases will be kept.` });
+    const list = this.contentEl.createEl('ul', { cls: 'tps-health-mapping-preview' });
+    for (const change of this.changes) list.createEl('li', { text: change.file.path });
+    this.contentEl.createEl('p', { text: 'Cancel keeps your current mapping and notes unchanged.' });
+    new Setting(this.contentEl)
+      .addButton(button => button.setButtonText('Cancel').onClick(() => this.close()))
+      .addButton(button => button.setButtonText('Update notes and mapping').setCta().onClick(() => { this.accepted = true; this.close(); }));
+  }
+  onClose(): void { this.resolve(this.accepted); this.contentEl.empty(); }
+}
+
+const busy = new WeakSet<TPSHealthPlugin>();
+export async function changeHealthMapping(plugin: TPSHealthPlugin, next: TPSHealthSettings, label: string, scope: HealthMappingScope = "all"): Promise<boolean> {
+  if (busy.has(plugin)) throw new Error('Another Health mapping change is already open.');
+  busy.add(plugin);
+  const before = structuredClone(plugin.settings);
+  const changes: Change[] = [];
+  const applied: Change[] = [];
+  let settingsAttempted = false;
+  let restoreKindKeys: (() => Promise<void>) | undefined;
+  try {
+    await plugin.assertHealthMappingWritable(before);
+    if (scope === 'workout-timing' && HEALTH_MAPPING_KEYS.some(key =>
+      !(WORKOUT_TIMING_MAPPING_KEYS as readonly string[]).includes(key) && !same(before[key], next[key]))) {
+      throw new Error('A workout calendar repair cannot change other Health mappings.');
+    }
+    const api = plugin.getGcmNativeRecordsApi();
+    const profile = api?.getStorageProfile?.();
+    const kindKey = profile ? profile.kindPropertyKey : 'kind';
+    const identityKey = profile?.identityMode === 'property' ? profile.identityPropertyKey : 'id';
+    assertHealthIdentityMappings(before, identityKey);
+    assertHealthIdentityMappings(next, identityKey);
+    const kindKeys = api?.getKindPropertyKeys?.() || {};
+    const nextKindKeys = { ...kindKeys };
+    for (const key of Object.keys(before.nativeRecordKinds) as HealthNativeRecordKindKey[]) {
+      const from = before.nativeRecordKinds[key], to = next.nativeRecordKinds[key];
+      if (from !== to && Object.prototype.hasOwnProperty.call(kindKeys, from)) {
+        if (Object.prototype.hasOwnProperty.call(kindKeys, to)) throw new Error('The new record value already has a key mapping.');
+        delete nextKindKeys[from]; nextKindKeys[to] = kindKeys[from];
+      }
+    }
+    const nativeContext = (inspected: any) => inspected ? { kind: inspected.kind, kindKey: inspected.profile?.kindPropertyKey || api?.getStorageProfile?.(inspected.kind)?.kindPropertyKey || kindKey } : null;
+    const identityKeys = scope === 'workout-timing'
+      ? [before.nativeRecordKinds.workoutSession, ...(before.nativeRecordKindAliases.workoutSession || []), 'workout-session', 'runType', 'workoutId'].filter(Boolean)
+      : [before.foodFrontmatterKey, before.workoutFrontmatterKey, kindKey, ...Object.values(kindKeys) as string[], 'kind', 'tpsType', 'runKind', 'runType', identityKey, 'id', 'tpsId', 'tpsSchemaVersion', 'tags'].filter(Boolean);
+    for (const file of plugin.app.vault.getMarkdownFiles()) {
+      const fm = await readFrontmatter(plugin.app, file, identityKeys);
+      const inspected = api?.inspect?.(fm);
+      // Never reinterpret an uninspectable native record as a reusable definition.
+      if (!inspected && Object.keys(fm).some(key => [identityKey, 'id', 'tpsId', 'tpsSchemaVersion'].some(identity => identity && key.toLowerCase() === identity.toLowerCase())) && !api?.inspect) {
+        throw new Error('Enable TPS GCM before migrating native Health records.');
+      }
+      if (inspected && !kindKey) throw new Error('Configure a shared record kind property in GCM before migrating Health mappings.');
+      let updated: Record<string, unknown>;
+      try { updated = migrateHealthFrontmatter(fm, before, next, nativeContext(inspected), scope); }
+      catch (error) { throw new Error(`${file.path}: ${error instanceof Error ? error.message : error}`); }
+      if (!same(fm, updated)) changes.push({ file, before: fm, after: updated });
+    }
+    logger.flow('Settings', 'mapping:preview', { notes: changes.length, scope });
+    const confirmed = await new Promise<boolean>(resolve => new ConfirmMappingMigration(plugin.app, label, changes, resolve).open());
+    if (!confirmed) return false;
+    await plugin.assertHealthMappingWritable(before);
+    if (!same(api?.getStorageProfile?.(), profile) || !same(api?.getKindPropertyKeys?.() || {}, kindKeys)) throw new Error('GCM record keys changed. Review the change again.');
+    if (mappingSnapshot(plugin.settings) !== mappingSnapshot(before)) throw new Error('Mappings changed while the preview was open. Review the change again.');
+    // Re-scan the whole vault: newly created matches also require a fresh preview.
+    const currentFiles = plugin.app.vault.getMarkdownFiles();
+    const planned = new Map(changes.map(change => [change.file.path, change]));
+    for (const file of currentFiles) {
+      const fm = await readFrontmatter(plugin.app, file, identityKeys);
+      const inspected = api?.inspect?.(fm);
+      const updated = migrateHealthFrontmatter(fm, before, next, nativeContext(inspected), scope);
+      const expected = planned.get(file.path);
+      if (expected ? !same(fm, expected.before) || !same(updated, expected.after) : !same(fm, updated)) throw new Error('Notes changed while the preview was open. Review the change again.');
+      planned.delete(file.path);
+    }
+    if (planned.size) throw new Error('A previewed note moved or was deleted. Review the change again.');
+    for (const change of changes) {
+      await plugin.app.fileManager.processFrontMatter(change.file, fm => {
+        if (!same(fm, change.before)) throw new Error(`Note changed during migration: ${change.file.path}`);
+        for (const key of Object.keys(fm)) delete fm[key];
+        Object.assign(fm, change.after);
+      });
+      applied.push(change);
+    }
+    // Logging, sync or another editor can run while a large batch is writing.
+    // Do not switch readers until every matching note still has the reviewed result.
+    const completed = new Map(changes.map(change => [change.file.path, change]));
+    for (const file of plugin.app.vault.getMarkdownFiles()) {
+      const fm = await readFrontmatter(plugin.app, file, identityKeys);
+      const expected = completed.get(file.path);
+      if (expected) {
+        if (!same(fm, expected.after)) throw new Error('Notes changed during migration. Review the change again.');
+      } else {
+        const inspected = api?.inspect?.(fm);
+        const updated = migrateHealthFrontmatter(fm, before, next, nativeContext(inspected), scope);
+        if (!same(fm, updated)) throw new Error('Notes changed during migration. Review the change again.');
+      }
+      completed.delete(file.path);
+    }
+    if (completed.size) throw new Error('A note moved during migration. Review the change again.');
+    await plugin.assertHealthMappingWritable(before);
+    if (mappingSnapshot(plugin.settings) !== mappingSnapshot(before) || !same(api?.getStorageProfile?.(), profile) || !same(api?.getKindPropertyKeys?.() || {}, kindKeys)) throw new Error('Mappings changed during migration. Review the change again.');
+    if (!same(kindKeys, nextKindKeys)) {
+      if (!api?.configureKindPropertyKeys) throw new Error('Update GCM before changing mapped record values.');
+      await api.configureKindPropertyKeys(nextKindKeys, kindKeys);
+      restoreKindKeys = () => api.configureKindPropertyKeys(kindKeys, nextKindKeys);
+    }
+    if (scope === 'all' || mappingSnapshot(before) !== mappingSnapshot(next)) {
+      const keys = scope === 'workout-timing' ? WORKOUT_TIMING_MAPPING_KEYS : HEALTH_MAPPING_KEYS;
+      for (const key of keys) (plugin.settings as any)[key] = structuredClone(next[key]);
+      if (scope === 'all') {
+        plugin.settings.nativeRecordKindAliases = {};
+        plugin.settings.nativeRecordPropertyAliases = {};
+      }
+      settingsAttempted = true;
+      await plugin.saveSettings();
+    }
+    await plugin.assertHealthMappingWritable(plugin.settings);
+    api?.refreshConfiguration?.();
+    plugin.nativeRecordService?.refreshConfiguration();
+    logger.flow('Settings', 'mapping:complete', { notes: changes.length, scope });
+    new Notice(scope === 'workout-timing' ? `Updated ${changes.length} workout notes${settingsAttempted ? ' and saved the mapping' : ''}.` : `Updated ${changes.length} Health notes and saved the mapping.`);
+    return true;
+  } catch (error) {
+    const failed: string[] = [];
+    for (const change of applied.reverse()) {
+      try {
+        await plugin.app.fileManager.processFrontMatter(change.file, fm => {
+          if (!same(fm, change.after)) throw new Error('Concurrent edit');
+          for (const key of Object.keys(fm)) delete fm[key];
+          Object.assign(fm, change.before);
+        });
+      } catch { failed.push(change.file.path); }
+    }
+    if (restoreKindKeys) { try { await restoreKindKeys(); } catch { failed.push("GCM record key mappings"); } }
+    if (settingsAttempted) {
+      for (const key of HEALTH_MAPPING_KEYS) (plugin.settings as any)[key] = structuredClone(before[key]);
+      try { await plugin.saveSettings(); } catch { failed.push('Health settings'); }
+    }
+    plugin.nativeRecordService?.refreshConfiguration();
+    logger.flowError('Settings', 'mapping:failed', error, { changed: applied.length, rollbackFailures: failed.length });
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`${detail}${failed.length ? ` Could not restore: ${failed.join(', ')}. Keep the vault open and repair these before changing mappings again.` : ' No mapping change was saved; completed note changes were restored.'}`);
+  } finally { busy.delete(plugin); }
+}

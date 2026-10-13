@@ -1,0 +1,333 @@
+/* Source: src/styles/sections/list-provider-rows.css */
+
+.nn-virtual-provider-row {
+    box-sizing: border-box;
+    height: var(--item-height);
+}
+
+.nn-provider-row:not(.nn-provider-row--type) {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-sizing: border-box;
+    height: 100%;
+    padding: 6px var(--nn-file-item-padding-horizontal);
+    border-bottom: var(--nn-separator-height) solid var(--nn-theme-list-separator-color);
+    color: var(--nn-theme-foreground);
+    user-select: none;
+}
+
+.nn-provider-row:not(.nn-provider-row--type).is-selected {
+    background-color: var(--nn-selected-file-bg-color);
+    border-radius: min(16px, var(--nn-theme-file-border-radius));
+    box-shadow: inset 0 0 0 var(--nn-theme-file-border-width) var(--nn-selected-file-border-color);
+}
+
+/* Standalone Type rows share the ordinary file-list chrome and state classes. */
+.nn-provider-row--type {
+    color: var(--nn-theme-foreground);
+}
+
+.nn-provider-row--type .nn-file-inner-content {
+    align-items: flex-start;
+}
+
+.nn-provider-row-checkbox {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    appearance: none;
+    color: var(--text-on-accent);
+    font: inherit;
+    font-size: 12px;
+    line-height: 1;
+}
+
+/* Provider task controls are file-row chrome, never Obsidian command buttons. */
+/* stylelint-disable declaration-no-important -- Obsidian/theme button chrome can load after plugin styles. */
+.nn-provider-row button.nn-provider-row-checkbox {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    appearance: none !important;
+}
+
+.nn-provider-row-checkbox > span {
+    width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    border: 1px solid var(--checkbox-border-color, var(--background-modifier-border));
+    border-radius: var(--checkbox-radius, 4px);
+}
+
+.nn-provider-row-checkbox.is-interactive {
+    cursor: pointer;
+}
+
+.nn-provider-row-checkbox.is-interactive:hover {
+    color: var(--text-on-accent);
+}
+
+.nn-provider-row-checkbox.is-interactive:hover > span {
+    border-color: var(--interactive-accent);
+}
+
+.nn-provider-row-checkbox.is-interactive:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: 2px;
+}
+
+.nn-provider-row-checkbox.is-interactive:disabled {
+    cursor: wait;
+    opacity: 0.65;
+}
+
+.nn-provider-row-checkbox.is-checked {
+    color: var(--text-on-accent);
+}
+
+.nn-provider-row-checkbox.is-checked > span {
+    border-color: var(--interactive-accent);
+    background: var(--interactive-accent);
+}
+
+.nn-provider-row-checkbox.has-marker:not(.is-checked) > span {
+    color: var(--text-muted);
+    font-weight: var(--font-semibold);
+}
+
+/* Match the native desktop file-icon slot while retaining a useful checkbox target. */
+.nn-provider-row--type .nn-provider-row-checkbox {
+    width: var(--nn-file-title-line-height);
+    height: var(--nn-file-title-line-height);
+    flex-basis: var(--nn-file-title-line-height);
+}
+
+.nn-provider-row--type .nn-provider-row-checkbox-slot {
+    width: var(--nn-file-title-line-height);
+    flex-basis: var(--nn-file-title-line-height);
+}
+
+.nn-provider-row-open {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+}
+
+.nn-provider-row:not(.nn-provider-row--type) .nn-provider-row-open:hover .nn-provider-row-label {
+    color: var(--text-accent);
+}
+
+.nn-provider-row-open:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: 2px;
+}
+
+.nn-provider-row button.nn-provider-row-open {
+    align-self: stretch;
+    justify-content: flex-start;
+    gap: 0;
+    margin: 0;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    appearance: none !important;
+}
+
+.nn-provider-row--type .nn-provider-row-open.nn-file-text-content,
+.nn-provider-row--type .nn-provider-row-open.nn-compact-file-text-content {
+    order: 1;
+}
+
+.nn-provider-row--type .nn-compact-file-header,
+.nn-provider-row--type .nn-file-second-line {
+    width: 100%;
+}
+
+.nn-provider-row-more {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    box-shadow: none;
+    appearance: none;
+    color: var(--nn-theme-foreground-muted);
+    cursor: pointer;
+}
+
+.nn-provider-row button.nn-provider-row-more {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    appearance: none !important;
+}
+/* stylelint-enable declaration-no-important */
+
+.nn-provider-row-more:hover {
+    background: var(--background-modifier-hover);
+    color: var(--nn-theme-foreground);
+}
+
+.nn-provider-row-more:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: 2px;
+}
+
+.nn-provider-row-more .svg-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.nn-provider-row--type .nn-provider-row-more {
+    order: 2;
+    align-self: center;
+    width: var(--nn-file-title-line-height);
+    height: var(--nn-file-title-line-height);
+    flex-basis: var(--nn-file-title-line-height);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.nn-desktop .nn-provider-row--type:hover .nn-provider-row-more,
+.nn-provider-row--type:focus-within .nn-provider-row-more {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.notebook-navigator-mobile .nn-provider-row--type .nn-provider-row-more {
+    opacity: 1;
+    pointer-events: auto;
+    background: transparent;
+}
+
+/* Mobile Type results use the same geometry and typography as ordinary file rows. */
+.notebook-navigator-mobile .nn-provider-row--type {
+    margin-inline: 0;
+    width: 100%;
+    border-radius: 0;
+    background: transparent;
+}
+
+/* stylelint-disable declaration-no-important -- Obsidian iOS/theme button chrome can load after plugin styles. */
+.notebook-navigator-mobile .nn-provider-row--type button.nn-provider-row-open {
+    all: unset;
+    box-sizing: border-box;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    align-self: stretch;
+    order: 1;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    justify-content: flex-start;
+    gap: 0;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    appearance: none !important;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+}
+
+/* Mobile structural rows are always one compact line, matching the Notes list. */
+.notebook-navigator-mobile .nn-provider-row--type .nn-file-name {
+    display: block;
+    overflow: hidden;
+    max-height: var(--nn-file-title-line-height);
+    white-space: nowrap;
+    word-break: normal;
+    -webkit-line-clamp: 1;
+}
+
+.notebook-navigator-mobile .nn-provider-row--type .nn-file-second-line {
+    display: none;
+}
+
+.notebook-navigator-mobile .nn-provider-row--type button.nn-provider-row-checkbox,
+.notebook-navigator-mobile .nn-provider-row--type button.nn-provider-row-more {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    appearance: none !important;
+}
+
+.notebook-navigator-mobile .nn-provider-row--type button.nn-provider-row-checkbox {
+    border-radius: 0 !important;
+}
+
+.notebook-navigator-mobile .nn-provider-row--type button.nn-provider-row-more {
+    border-radius: 4px !important;
+}
+/* stylelint-enable declaration-no-important */
+
+.notebook-navigator-mobile .nn-provider-row--type.nn-selected {
+    background: var(--nn-selected-file-bg-color);
+}
+
+.nn-provider-row-label,
+.nn-provider-row-secondary {
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nn-provider-row-label {
+    color: var(--nn-theme-file-name-color);
+    font-weight: var(--nn-theme-file-name-font-weight);
+}
+
+.nn-provider-row-secondary {
+    color: var(--nn-theme-foreground-muted);
+    font-size: var(--font-ui-smaller);
+}
+
+.nn-provider-row--type .nn-provider-row-secondary {
+    color: var(--nn-theme-file-parent-color);
+    font-size: var(--nn-file-small-size-mobile, var(--nn-file-small-size));
+    font-weight: var(--nn-theme-file-parent-font-weight);
+    line-height: var(--nn-file-single-text-line-height);
+}
+
+.nn-file.nn-selected .nn-provider-row-secondary {
+    color: var(--nn-selected-file-parent-color);
+}
+
+.nn-provider-row-type-icon > .svg-icon {
+    width: var(--nn-file-icon-size-mobile, var(--nn-file-icon-size));
+    height: var(--nn-file-icon-size-mobile, var(--nn-file-icon-size));
+}

@@ -1,0 +1,1823 @@
+# TPS Global Context Menu
+
+## 9.1.0 — Native Markdown checkbox marker menu
+
+Right-click a native Markdown checkbox in Live Preview or Reading View, or
+hold it for 550 ms on mobile, to choose its marker. Defaults are `[ ]`, `[x]`,
+`[/]`, `[?]`, and `[!]`. **Custom checkbox value…** uses the existing accessible
+text modal for any single-character value. Ordinary clicks remain owned by
+Obsidian. A pending hold cancels on movement, release before the deadline,
+multitouch, note switching or unload; after opening, its synthetic click and
+native context-menu duplicate are consumed without toggling the checkbox.
+
+**Workflows → Tasks → Markdown checkbox menu choices** configures the menu's
+order and values, one per line, with an explicit Apply button. The new persisted
+`checkboxMenuStates` array is independent of whole-note status and retired
+linked-checkbox mappings. An empty array keeps only Custom. Invalid drafts do
+not save. No setting migration or note scan is added. The existing five settings
+destinations, default route and disclosure depth remain unchanged. The control
+uses native Setting/textarea/button components and the existing mobile layout;
+its accessible label is explicit.
+
+Only the marker character changes. Live editors use Obsidian's `replaceRange`
+so unsaved text and undo remain intact. Reading View resolves the same section
+and relative source line that core checkbox clicks use, rejects stale cached
+selections before entering the file queue, then rechecks current content in
+`vault.process`. Duplicate titles are not searched or guessed. Source lines in
+frontmatter, fenced/indented code, HTML and comments are protected, and embedded
+or plugin-owned checkboxes are left to their owners. If a renderer cannot expose
+its native source position, GCM does not claim the gesture. Changing the selected
+line while the menu is open requires reopening it.
+
+This does not restore line metadata, checklist status sync, completion dates,
+recurrence, history or task-line action menus. No file-open maintenance,
+background work, cache or watcher is added. Native rendering of special markers
+is theme-dependent; their Markdown values are preserved regardless of theme.
+Minimum Obsidian remains 1.10.0. Physical iPhone verification is separate from
+Mac and simulated touch validation.
+
+Focused tests cover source protection and exact character preservation, source
+positions, current-source conflicts, configured choices, editor ownership, no-op
+operation counts and gesture teardown. The final version passed 37 focused
+marker/gesture checks, 326 supplemental checks and all 1,767 full-suite checks
+with no skips. Validation also requires a separate final `npm run build`,
+test-vault deployment and targeted manifest-ID reload. Installed Obsidian
+1.14.4 QA verified Reading View (including a nested task), Live Preview,
+ordinary core clicks, Custom, native undo and the configurable Tasks control
+with all eight active TPS consumers enabled. The note body changed by exactly
+one marker character per action and its frontmatter stayed intact. Scope-limited
+unit counts are distinct from integrated consumer reads: a Reading View action
+observed 2 raw and 12 cached reads plus 1 process; an editor action observed
+1 raw and 7 cached reads plus 1 replaceRange and no process. Those include
+existing consumer reactions, not solely this handler. No production speed claim
+is made. Test settings were preserved and the synthetic note was archived. See
+[9.1.0 release notes](release-notes/9.1.0.md) for validation and artifact hashes.
+
+## 9.0.0 — Canonical record identity is id
+
+The native-record API is now version 7. Its envelope exposes `frontmatter.id`
+and references use `{path, id}`; the former canonical `frontmatter.tpsId`
+contract is removed. Stable identity values, record paths and filenames stay
+unchanged. Update consumers that read the envelope or supply computed-field
+callbacks together with this major release. Minimum Obsidian remains 1.10.0.
+
+First-install settings use `id` as the physical note property. Existing sparse
+settings that omitted the former default retain `tpsId`; the loader persists
+that existing setting key without reading or rewriting notes. A saved physical identity
+key, including `tpsId` or a custom key, survives load normalization and remains
+usable. API inspections preserve authored physical fields and add the canonical
+`id` projection. Normal create, update, reidentify, note timers and identity
+protection use the configured key. Note content is not migrated during startup,
+layout readiness or navigation.
+Identity keys cannot reuse another canonical API envelope field (`kind`,
+`title`, `tpsSchemaVersion`, `createdDate` or `modifiedDate`). These collisions
+fail validation before native creation or a confirmed identity migration.
+
+**Advanced → Atomic note properties → Record identity key** changes a draft.
+Apply uses the existing confirmed property migration to rename frontmatter
+keys in notes, archives and templates, plus recognized Base expressions and
+GCM/Navigator configuration references. It preserves the exact stored ID,
+comments, line endings and note body. Occupied destinations, including an equal
+`id`, malformed or duplicate keys, stale previews and unsafe expressions block
+the transaction. Cancel leaves notes and settings unchanged. Existing recovery
+and exact-source checks remain the mutation owner. Inline carriers and prose
+are outside that migration. Historical whole-note identifiers participate only
+as protection evidence or explicit consolidation inputs; no automatic rewrite,
+repair, fallback writer, watcher or navigation work is added.
+
+The five settings destinations and default route remain unchanged. The identity
+control joins the existing native Setting layout without another disclosure;
+its native Apply/preview controls retain keyboard focus, wrapping labels and
+mobile touch targets. `nativeRecordIdentityPropertyKey` remains the persisted
+setting; no new state or schema key is introduced. Session `id` and targetId
+remain distinct: the historical timer target alias is decoded only at session
+normalization, never from a session's own ID.
+
+Focused regressions cover custom and legacy physical keys across native
+creation, mutation and reidentification; canonical API generation; explicit
+schema-free consolidation; occupied destinations; cancelled migrations;
+Base/Navigator references; timer target/session separation; and preserved
+unchanged inspection counts. Required gates are `npm run prepretest`, the full
+`npm test`, and a separate `npm run build`. The final versioned source passed
+326/326 supplemental pre-pretests and 1,730/1,730 full-suite checks. The separate final ordinary stable build deployed only to the test vault, followed
+by targeted manifest-ID reload and actual UI/API integration checks. Installed
+QA boundaries, migration preservation, counts and SHA-256 hashes are in
+[9.0.0 release notes](release-notes/9.0.0.md). Production installation and physical
+iPhone acceptance remain separate.
+
+## 8.2.0 — Current-day accent and responsive daily navigation
+
+Daily Note Navigation uses Obsidian's `--interactive-accent` and
+`--text-on-accent` appearance colors for **Today** and the visible date that is
+actually today. Opening a different daily note keeps that date centered above
+Today with neutral bold text; it does not move the accent highlight to the
+opened date. When today is outside the visible range, Today remains the accent
+action. Dates use the local clock. A single component-owned timeout refreshes
+at the next local midnight, including daylight-saving transitions; focus and
+visibility resume use the existing coalesced overlay refresh queue. Detach,
+disable and unload cancel the timeout, and stale queued callbacks do nothing.
+
+**Appearance → Daily Note Navigation → Visible day buttons** is now a native
+selector with **Automatic (up to five)** and the existing fixed counts 1–7.
+Automatic is the default for unset settings and stores `0` in the existing
+`dailyNavDayCount` key. Saved fixed values remain fixed until changed. Every
+range is relative to the opened date, including seven days, which previously
+showed an ISO week. Odd counts center that date exactly; even fixed counts keep
+the existing left-biased range. There are no new keys or migrations.
+
+Automatic creates five equal-width date buttons once; scoped CSS container
+queries reduce them to three below 26em or one below 16em of available strip
+width. Thresholds follow the existing daily navigation text scale. Resizing
+needs no JavaScript observer, source read or rerender. On mobile the date strip
+is visible above Today, remains attached to its note's leaf shell and keeps
+36px-tall controls. The fallback beneath a title shares the same centered axis;
+blank space around floating buttons lets clicks reach the note underneath.
+Daily-note identification, create/open routing, templates,
+the optional Today setting and native note contents retain their owners.
+
+The settings destination map, default rules/fields route and disclosure depth
+are unchanged. Only the existing visible-day control changes from a slider to
+a selector; its save uses the same settings writer and daily-navigation refresh.
+Minimum Obsidian remains 1.10.0. Physical iPhone verification remains pending.
+
+Focused tests cover fixed/automatic counts, opened-date centering, current-day
+highlighting, out-of-range today, midnight/DST/resume, mobile placement and
+teardown, scoped accent/container CSS, and 100 unchanged refreshes with no note
+reads, writes, inventory or DOM/timer churn. Create/open routing retains its
+existing focused suite. Installed Obsidian 1.14.4 QA used the actual GCM owner,
+DOM and styles with temporary leaf/date/opening facades, and all eight active
+TPS consumers enabled. Foreground screenshots confirmed Thursday centered
+above Today while Friday retained the appearance accent, and the mobile date
+strip remained above the controls. Native date/previous/Today clicks selected
+the expected dates through the test-only opening facade; they did not create
+notes. Geometry checks covered automatic five/three/one layouts at 100%, 150%
+and 200% text scales and fixed 1/3/5/7, with no overflow and centering error
+below 0.004px. Changing the local accent CSS variable updated both accent
+buttons without a rerender. Before and after the change, 100 unchanged owner
+refreshes each used zero raw/cached note reads, inventories or write attempts;
+100 width changes also retained the same DOM and midnight timer. These are
+presentation counts, not startup or production timing claims. Temporary
+instrumentation and settings were restored without a persisted settings change.
+The actual Appearance selector retained a saved three-day choice and accepted
+Automatic then three days with one existing save/refresh per selection in an
+isolated draft. Its eight choices and accessible label were verified. Final
+versioned gates passed 1,719 declared-suite checks and 322 supplemental checks,
+with zero failures or skips, TypeScript and the separate production-mode build
+deploying only to the test vault. Reload uses the manifest-ID owner; no outbound
+automation was enabled and no real note or production setting was changed.
+Final test-vault validation and artifact hashes are
+recorded in [8.2.0 release notes](release-notes/8.2.0.md); this minor feature is
+handed off through BRAT and is not a direct production installation.
+
+## 8.1.1 — Use Obsidian file renaming
+
+Clicking a note's inline title, its GCM menu title row, or the existing
+`rename-active-note-title` command opens Obsidian's native file rename dialog
+for that exact file. Core owns the input, validation, cancellation, file rename
+and link updates. The former custom Title modal, duplicate-prompt time gate and
+Backspace/Delete frontmatter writer are removed. There is no title write or
+render refresh merely for opening or canceling the dialog. The legacy command
+ID remains compatible; it now renames the file rather than editing a property.
+
+The display can still use frontmatter title. Pointer presses prevent core from
+editing that projected text; one click opens the core dialog. Keyboard focus
+restores the filename before core's inline editor receives focus: core otherwise
+commits projected text on blur even without typing. This is a synchronous
+presentation change with no source inspection or mutation. Keyboard filename
+editing remains Obsidian's own input. Title icons keep their existing behavior. The same three component-owned DOM
+handlers cover the main document and existing/new detached windows, using
+Obsidian's cross-window node check and each title's own focused document.
+There is no additional vault listener or source work on window focus.
+
+The existing committed file-rename owner propagates filename changes when
+**Auto-sync title from filename** (`autoSyncTitleFromFilename`) is enabled,
+including mobile and the User role. Folder-only moves, generic startup,
+creation and navigation do not gain a title writer. Native records use their
+existing selected-source atomic title action and configured storage profile;
+identity/conflict, exclusions, template, Daily Note and superseded-edit guards
+remain. Internal record/import filename maintenance is recognized by its
+existing ownership guard and does not become another title edit. Explicit
+property edits keep their existing property writer and optional auto-rename
+setting; a resulting sanitized/date-formatted filename is not a second edit.
+
+Vault rename events have no actor, so unmarked third-party or externally synced
+filename changes follow the same existing title-sync setting. Imported calendar
+titles still belong to their provider; a later external sync can restore its
+title and filename. This release adds no provider-title override, repair loop,
+new watcher, scheduler, persistent state, settings key or migration.
+
+The exact-target core prompt is present in inspected Obsidian 1.14.4 but is not
+in the public TypeScript declarations. It is feature-detected; an unsupported
+version reports a notice without an active-file or custom-editor fallback.
+Minimum supported Obsidian remains 1.10.0. Physical iPhone validation remains
+pending; native core controls are used on both platforms.
+
+Final versioned validation passed **1,706 declared-suite checks**, **322
+supplemental checks**, TypeScript and the separate ordinary production-mode
+build, which deployed only to Obsidian Plugin Test Vault. The targeted reload
+verified GCM **8.1.1** and Navigator **8.2.6** with all eight active TPS consumers
+enabled and the background automation role disabled. Installed foreground
+inline-title and Navigator context-menu saves each opened one core **Note
+title** dialog, committed one filename rename and one native-record title
+update, with no custom title action. Titles and note bodies remained correct.
+Title cancellation and detached-window cancellation each made zero source
+reads, writes or inventories. Core keyboard title focus restored the filename;
+blurring without typing changed neither filename nor source. A newly created
+ordinary `Untitled.md` also renamed and propagated its title correctly; creation
+used the vault API and the subsequent native dialog used actual keyboard input.
+
+Combined-consumer title-save counts were four raw reads, nine cached reads and
+four inventories; Navigator save used four raw, eight cached and two inventories.
+These counts include existing downstream consumers. The source-owner native
+propagation test uses one authoritative read and one atomic process, with zero
+inventories or additional renames; 100 unchanged propagations do no I/O or
+writes. The owning title UI performs no source work while prompting or focusing.
+No latency, production or physical-mobile claim follows from this QA. Temporary
+instrumentation was removed, the original note/dashboard restored and the two
+owned fixtures archived byte-identically. All runtime settings remained
+byte-identical except Navigator's existing release acknowledgement. The patch
+release and artifact hashes are in [8.1.1 release notes](release-notes/8.1.1.md);
+the public numeric release is the BRAT handoff, not a production installation.
+
+## 8.1.0 — Bounded startup recovery and read-only indexed evidence
+
+Startup no longer initializes or waits for the retired item-history store when
+`enableItemHistory` is false. Its historical explicit APIs remain; no stored
+history, note property or setting is deleted. Startup embed, Navigator-rule and
+recurrence callbacks now belong to their current plugin activation and are
+canceled or ignored after unload. Recurrence cleanup releases its in-memory
+tracker and pending timers without persisting an empty tracker. A save already
+entered at the adapter boundary may drain; an obsolete continuation cannot
+start a later read or write.
+
+Enabled time tracking waits for core metadata readiness before its one initial
+Markdown inventory. Complete metadata rejects ordinary non-candidates without
+reading their bodies. Candidate notes and missing or unresolved source evidence
+still use the existing source inspection owner. Thereafter create/modify/rename/
+delete listeners update the existing per-file session map; repeated inspection
+walks that map in cooperative slices, but performs source reads only for changed
+or unknown paths. Settled metadata proof remains valid for unrelated files when
+one source changes. Non-Markdown events and unchanged metadata bursts do not
+repeat the inventory or body reads. The map retains only normalized timer records, never note bodies.
+
+A transient `sourceChanged` marker inside that existing map distinguishes a
+changed source from an uninspected bootstrap candidate. A delayed or resolved
+metadata negative cannot authorize skipping a changed source. Failed reads or
+malformed frontmatter reject the owning inspection, retain known timer display
+counts and prevent new timer identity preparation/writes from incomplete
+recovery, including multiple-active and manual-session actions. Stop, pause,
+edit and delete use that same recovery boundary. The native Start command passes
+read-only active-note input to its sole preparation owner. The exposed target
+resolver keeps its return contract and waits for recovery before preparing an
+identity. Direct enabled calls before activation or after unload fail closed
+rather than enter legacy full-source discovery. A later explicit or existing
+periodic inspection may inspect the source again; no automatic retry loop or fallback mutation is added. Disabled time
+tracking still owns no source scans, listeners, timers or dock.
+
+The additive native-record methods preserve API **version 6** and advertise their
+individual capabilities. This minor release adds no new property or settings
+migration. An upgrade from 7.3.12 or another pre-8.0 version also includes 8.0
+removal of automatic editor-mode enforcement and its four retired settings keys;
+manual Obsidian/GCM mode controls remain. Existing `snapshot()` and identity/mutation APIs keep
+current-source verification, conflict protection and their authority token.
+
+- `indexedSnapshot(kind?, { includeConflicts? })` is synchronous and metadata-only.
+  It returns `{ ready, records, conflicts? }`, with no authority token or refresh.
+  It reports `ready: false` during initial or failed discovery, incomplete core
+  metadata, pending source metadata, active source verification/writes and after
+  unload. Consumers must retain their prior display/projection while it is not
+  ready. A selected kind narrows record allocation; requested conflicts retain
+  all identity evidence. It never permits creating, changing or reserving an ID.
+- Metadata resolution releases display-only pending paths. It does **not** clear
+  authoritative dirty paths, source envelopes or source generations. The small
+  transient pending-metadata set is necessary because source-authority
+  invalidation and display readiness have different owners; it is neither a
+  persistent cache nor a new watcher/poller. Initial classification prepares the
+  existing mapping configuration once per cooperative slice, while later events
+  still inspect current configuration and frontmatter.
+- `updateFromSource(reference, propertyKeys, compute, cause)` accepts a synchronous
+  function of detached current canonical frontmatter, returning declared plain
+  updates or `null`. It reuses the existing source-preserving atomic update
+  writer, source/configuration/identity/conflict checks and automation exclusions.
+  Canonical `title` can be updated with business fields in one action. Identity,
+  schema, classification, created/modified envelope keys and undeclared keys are
+  rejected, as are async/Promise callbacks. Null and unchanged results preserve
+  source bytes and timestamps. This is an explicit edit API, not an index writer.
+- `applyIdentityChanges(plan, entries, cause, { isCurrent? })` checks the optional
+  activation predicate before the next entry and at existing atomic mutation
+  boundaries. Interrupted calls return the committed handle prefix with a failed
+  result; already committed work is retained. No rollback, retry or second queue
+  is introduced. The existing three-argument call remains compatible.
+
+Menu refresh requests reject files with neither a mounted menu nor a relevant
+linked-context consumer before scheduling. Existing mounted menus, linked
+source dependencies, explicit cold refresh and non-menu render surfaces retain
+their owners. Late overlay requests do nothing after unload. This changes no
+settings navigation, persisted schema, note contents or default controls.
+
+Focused actual-service tests pass **362/362**; the full declared `npm test`
+passes **1,697/1,697**, and supplemental `npm run prepretest` passes **303/303**.
+All have zero failures, cancellations or skips. The full and supplemental gates
+were repeated against version 8.1.0. TypeScript and the versioned build-only gates
+pass with `TPS_NO_DEPLOY=1` and report `target=none`. The ordinary stable build
+then deployed only to the test vault; GCM was reloaded as 8.1.0, and source/runtime
+artifacts match exactly. GCM data and recurrence-session bytes are unchanged.
+
+The bounded tests use synthetic Vault, metadata, atomic writer and scheduler
+boundaries, counting work separately from timings. A 4,049-note cold recovery
+waits for complete core metadata with zero inventory/body reads while pending,
+then performs one inventory and reads eight timer candidates. An edit during
+that bootstrap adds only its selected source read (nine total); repeated queries
+and three unchanged full metadata bursts add no reads or inventory. Missing,
+malformed and changed-but-stale metadata remain unknown until source inspection
+succeeds. One thousand ordinary notes retain zero non-candidate body reads through
+asset and folder events. Disabled features, failures and stop/re-enable races remain covered.
+
+One hundred indexed display queries perform zero inventories, reads or writes
+and expose no mutation token. Twenty warm ID-reference computed edits perform
+zero inventories/raw/cached reads and twenty existing atomic process calls.
+Twenty selected-path edits instead perform twenty selected fresh reads, with no
+global scan. Automation path exclusions reject before the serialized writer;
+late configured tag/template exclusions, unsafe evidence, configuration changes
+and concurrent identity arrivals reject at current source. Hidden menu-only
+bursts schedule no rendering; mounted requests still coalesce and refresh.
+
+Installed foreground QA on 2026-10-08 invokes the actual public native API one
+hundred times with `indexedSnapshot()`: readiness is true, 1,447 records are
+returned, and inventories, raw/cached reads, writes and authority-refresh calls
+remain zero. A separate installed actual-class timer control uses a synthetic
+4,049-note memory Vault boundary: one candidate restores through one inventory
+and one cached read; one hundred warm queries add no I/O. Same-stat source edits,
+stale metadata resolution, rename, deletion, malformed source and unload are
+verified. The final affected-path total is five cached reads, zero writes, with
+zero owned listeners after detach. This is installed logic with a bounded facade,
+not enabling time tracking or creating real timer notes in the test vault.
+
+The combined TPS candidate was also measured in five foreground warm startup
+runs per comparison, with a 30-second capture window, all eight active consumers
+enabled, outbound automation off and actual time tracking disabled. Median body
+readiness changed from 10.868 to 8.514 seconds, GCM API readiness from 14.886 to
+9.187 seconds, and Health readiness from 15.123 to 9.471 seconds. These combined
+suite observations include core layout and other consumers; they do not isolate
+GCM's contribution or measure first input responsiveness. Total startup reads
+increased: raw reads from 36 to 44 and cached reads from 34 to 73–74; repeated
+inventories remain three. Only the targeted component counts above establish
+removed work. This is not a claim of fewer total startup reads, process-cold,
+production or physical-iPhone performance.
+
+The session map still walks existing entries; an authoritative first native
+snapshot/identity reservation still verifies the vault, and later authoritative
+checks retain their existing invalidated-source safeguards. Combined installed
+Health/GCM nutrition action QA passed seven phases, preserving source and
+settings; the final separate build retained the verified artifact bytes. See [8.1.0 release notes](release-notes/8.1.0.md)
+for tested artifact hashes and handoff status. Minimum Obsidian remains 1.10.0;
+production is untouched.
+
+## 8.0.0 — Keep editor mode manual and disabled timers inactive
+
+GCM no longer automatically changes Reading, Live Preview, or Source mode.
+The automatic rules destination, per-note mode key, ignored-folder settings,
+`force-view-mode-check` command, active-leaf/metadata enforcement, mutation
+callbacks, temporary manual-override suppression and stale-mobile mount replay
+are removed. Existing note properties are left intact. The existing settings load/save path discards exactly
+`enableViewModeSwitching`, `viewModeFrontmatterKey`, `viewModeIgnoredFolders` and
+`viewModeRules`; runtime `data.json` is therefore expected to lose those keys.
+Other settings, including the manual-controls and time-tracking preferences,
+remain intact. This is a major
+version because a configured behavior, settings and a command are removed.
+
+Obsidian's own editor controls and GCM's explicit Reading/Live/Source actions
+remain. The existing `enableInlineManualViewMode` preference is unchanged; its
+control now lives directly in **Menus & surfaces**. **Rules & fields** keeps only
+Navigator rules and Custom fields. The shared condition engine continues to
+serve custom-field and ignore rules. Source-mode rendering still fails closed
+when host state and the mounted editor disagree; GCM does not replay editor
+state to fix the host. The existing read-only display mode observer remains.
+
+Time tracking keeps its existing feature switch, configuration, notes and APIs.
+Disabled time tracking now owns zero interval timers, workspace/vault/metadata
+listeners, resize listeners, startup jobs, timer source scans or dock elements.
+Enabling starts one listener/timer set after GCM startup readiness; disabling or
+unloading removes that set, cancels delayed startup work, releases its transient
+source cache and rejects late results from the stopped activation. Re-enabling
+reads current stored sessions, including changes made while disabled. Enabled
+time tracking retains its status refresh and scheduling intervals, session
+storage and explicit start/pause/resume/stop actions. No replacement poller,
+repair, retry or persisted state is introduced. Mobile mounts and reparents the
+same in-flow dock only while enabled.
+
+The existing recurrence recovery worker now accepts an optional list of changed
+paths through `sharedServices.recurrence.checkMissingRecurrences(paths)`.
+Controller can submit only successfully applied calendar note paths. An empty
+scope or disabled recurrence does no work; ordinary non-recurring scoped notes
+perform no body reads, writes or vault inventory. Calls without arguments keep
+the existing full startup/manual recovery. A scoped calendar sync consequently
+stops incidentally catching up unrelated completed notes; their existing startup
+recovery and explicit completion actions remain responsible for that work.
+
+Concurrent scopes join the same owning worker. Pending paths are deduplicated;
+a full pending request supersedes pending scoped paths, while requests arriving
+during an active pass are drained rather than dropped. On a failure, independent
+already-pending requests are drained once and joined callers receive the first
+error. This is request ownership, not a retry or new scheduler framework.
+Existing creation responses whose `handled` value is false retain their existing
+failure behavior.
+
+Metadata selects cheap recurrence candidates. The source already read for their
+existing protection inspection owns current completion, rule and durable
+successor markers, so a queued pass with stale metadata cannot generate a second
+undated tracker successor. The existing atomic creation guards remain. The
+unchanged document parser is moved into a pure utility and re-exported from
+`native-record-service` for compatibility; this extraction adds no source read.
+Fourteen scoped/actual-creation regressions cover current-source authority,
+tracker/date recurrence, overlapping full/scoped work, exclusions and failures.
+
+The initial focused gate passes 174 tests, including the actual time-tracking
+source service, mobile/desktop status component, settings/migration consumers,
+and actual registered GCM callback bodies. Disabled bursts of 1,000 synthetic
+files perform zero inventories, reads, listeners or timer registrations. The
+mode callback control runs 100 metadata changes, note opens and tab switches
+with zero editor-state mutations, inventories, source reads or note mutations;
+ordinary display callbacks still execute. Enabled startup restores a real stored
+session's note count; disable/read and disable/re-enable races cannot republish
+stale results. Manual core-mode choices each make one explicit view-state call.
+
+These are deterministic operation-count tests with host/UI facades, not installed
+vault speed or physical iPhone timing measurements. The full versioned `npm test`
+passes 1,680 checks and the separate supplemental `npm run prepretest` passes 290
+checks, both with no failures, cancellations or skips. TypeScript and the mandatory
+separate production-mode preflight build pass with `TPS_NO_DEPLOY=1`. Candidate
+artifacts were then deployed only to Obsidian Plugin Test Vault and the affected
+plugin reloaded; loaded version 8.0.0 and API readiness were verified.
+
+Installed foreground QA (2026-10-07), with all eight active TPS consumers enabled,
+opens the synthetic fixture through the core API in requested Live Preview
+(`mode: source`, `source: false`). The native control shows **Current view:
+editing**, and the fixture body is preserved. First and repeated open pairs
+perform zero automatic-mode decisions, mutations, stale checks or replays. The
+baseline pair performed one decision, one mutation and one stale check. Each
+pair still performs two raw reads owned by core/other consumers; those reads were
+not removed. Both candidate pairs perform zero vault inventories or note writes.
+Obsidian's native Reading → Editing controls work in both directions.
+
+The installed disabled timer control exercises `getActiveTimers()` and
+`getRuntimeStatus()` in 100 repetitions with zero inventories, reads or writes. Its
+activation, scan and dock owners are absent; listener cleanup arrays, source and
+count maps are empty, and no timer dock element exists. Rules & fields visibly
+contains only Navigator rules and Custom fields. Menus & surfaces exposes **Show
+manual view mode controls** with the existing Reading/Live Preview/Source actions.
+
+The installed recurrence control exercises the published GCM worker and
+Controller 3.1.7 dispatch with synthetic vault/metadata/frontmatter/journal and
+daily-exclusion boundaries. Unchanged sync dispatches no recovery and performs
+zero inventories, reads or writes. Changed ordinary notes dispatch once, inspect
+two metadata records and perform no inventories, reads or writes. Full startup
+still inventories 1,000 synthetic notes once. Overlapping full/scoped checks with
+stale metadata create exactly one successor for both daily and undated tracker
+rules. The control makes zero real note mutations or network calls. This is
+installed logic validation with synthetic boundaries, not a real import or
+input-to-paint timing claim.
+
+Saved-state comparison confirms GCM settings equal their baseline after deleting
+exactly the four retired mode keys, all of which are absent. All other consumer
+data hashes and the enabled community-plugin list remain unchanged; no note's
+view-mode property was edited. The final normal production build passed with byte-identical artifacts and
+reported the test runtime unchanged. Version 8.0.0 was subsequently published as
+a public BRAT-compatible release. Physical iPhone timing and production performance
+are not established by this QA. Minimum Obsidian stays 1.10.0. Production is untouched.
+
+## 7.3.17 — Remove heading link suggestions
+
+GCM no longer suggests existing notes while typing ordinary Markdown headings.
+The suggestion component, editor and keyboard listeners, vault-wide search,
+custom popover and its styles are removed. Obsidian's native `[[` link completion,
+heading folding, title editing, hover preview and body selection keep their
+existing owners. This does not add a setting, replacement service, watcher,
+cache or repair path. Saved configuration, note content and public APIs are
+unchanged. The minimum Obsidian version remains 1.10.0.
+
+Regression coverage requires the component, runtime registration and CSS to be
+absent, while preserving independent heading and editing features. The new
+retirement checks reproduced three failures before removal and pass all five
+afterward. Consumer checks pass 3/3; the full declared `npm test` passes 1,641
+checks with no failures, cancellations or skips. A separate final `npm run build`
+deploys only to the test vault. Hot Reload loads the new code; a targeted GCM
+reload after refreshing manifests verifies loaded version 7.3.17 and API readiness.
+
+Installed foreground Live Preview typing, with all eight active TPS consumers
+enabled, records 40 editor changes in each comparison. Before: 40 heading searches,
+40 Markdown inventories and 1,384,080 heading-owned metadata calls. The first search
+takes 79.9 ms; the median is 63.8 ms (range 60.8–79.9 ms). After: zero heading
+searches, zero inventories and zero heading-owned metadata calls. Application-wide
+metadata calls fall from 1,384,575 to 287 for these samples. A repeated 20-character
+burst also performs zero inventories and searches. These operation counts and
+instrumented component timings are separate evidence; they are not input-to-paint,
+physical iPhone, process-cold-startup or production timing claims. Ordinary core
+saving and unrelated display work remain: 2/1 raw reads, 14/7 cached reads and
+2/1 modifications in the before/after samples, with no frontmatter attempts.
+
+Native `[[` completion visibly offers the synthetic note and Enter inserts its
+link. The synthetic source marker and frontmatter remain intact, the fixture is
+moved directly to `_archive`, temporary wrappers are removed, the original leaf
+is restored, and saved data/enabled state retain their original hashes. No outbound
+automation is enabled. See [7.3.17 release notes](release-notes/7.3.17.md) for
+artifact hashes and limits. This patch is tested in the test vault and ready for
+the user's BRAT pull; production plugin installation has not been performed.
+
+## 7.3.16 — Cooperate during initial relationship indexing
+
+The initial parent/child relationship inventory now cooperates with host tasks at
+its existing 8 ms elapsed-work budget. It retains one metadata-only inventory and
+one ready-menu refresh. The inventory's own atomic cost is included, and folder
+entries cannot bypass checkpoints. The existing scheduler yield, MessageChannel
+and timer fallbacks release actual tasks; cheap work below the budget does not
+schedule mandatory tasks. This is startup work, not a navigation scan or writer.
+
+Accepted create/edit/delete/file/folder rename events are reconciled against live
+files before readiness. A superseding settings change and unload revoke the old
+build's publication authority. Provisional metadata resolution, legacy catalog
+prerequisites, explicit rebuilds, errors and concurrent settings waiters retain
+their owning behavior. No poller, watcher, repair, extra inventory, persisted
+metadata snapshot or note mutation is added. Explicit/settings rebuilds remain
+synchronous; this release addresses initial indexing and resolved catch-up.
+
+Validation on 2026-10-07 reproduces both remaining candidate budget defects before
+correction: an atomic inventory charged 12 ms allowed another 8 ms of metadata
+before yielding (20 ms); 20 folder entries charged 8 ms each delayed the first
+checkpoint until 160 ms. After correction those tests yield at 12 and 8 ms
+respectively. These are controlled logical costs, not machine timing claims.
+
+The normal `npm test` pretest includes the relationship regression script. Its
+10,000-Markdown-note controls exercise real Node MessageChannel and setTimeout
+fallbacks with a host-timer sentinel during indexing, exactly one inventory,
+10,000 initial cache reads, all 9,900 relationships unchanged, and zero body reads
+or writes. Repeated real persistent-menu lookups and actual file-open/tab callback
+bodies request no second relationship inventory. Other UI consumers are facades
+in those callback tests, and optional configured open automation is disabled;
+they are not installed end-to-end UI acceptance. Lifecycle controls include
+in-flight edits, deletes, creates, renames, settings changes and unloading.
+The scheduler branch uses a controlled substitute in tests. The installed Mac
+host has no native `scheduler.yield()`; its MessageChannel path is verified.
+Native browser scheduler execution remains untested.
+
+Reproduce the component comparison with
+`node scripts/benchmark-parent-startup.mjs 4cf8cc5b49f8f69c76c5b528d93c208070913352`.
+It compiles the published source and candidate before timing, uses the actual
+FileProperties classifier, preserves real clocks/task fallbacks, alternates
+three paired samples and records a 1 ms heartbeat. Both retain one inventory,
+10,000 initial metadata accesses, zero raw/body reads and writes, and identical
+complete relationship-graph SHA-256
+`646128ac60488edf047673532ff74219032639e07e471d18bdc0326032c4db32`.
+Longest heartbeat gaps are 119.60/93.77/80.79 ms before versus
+57.66/18.43/16.48 ms after; medians are 93.77 versus 18.43 ms.
+Median total completion is 92.44 versus 94.58 ms. This measures component
+cooperation, not total CPU reduction, installed vault speed or input-to-paint.
+The budget cannot preempt an individual operation, atomic inventory, garbage
+collection or host scheduling delay.
+
+The candidate's 65 focused checks passed on inspection. Final versioned validation
+passes 70 relationship checks, 1,673 declared checks and 303 explicit supplemental
+checks, with no failures, cancellations or skips. The normal test command includes
+the relationship controls. Three whole-onload assertions now recognize both the
+Native and Parent continuation owners in their shared task queue; Native-only
+exact-one and API/publication/unload protections remain. The focused Native suite
+passes 231 checks. No additional runtime correction was needed.
+
+Foreground installed 7.3.15/7.3.16 warm GCM-only reloads use the same 17,089 Markdown
+paths and 57,014 loaded files, with all eight consumers enabled. Both preserve
+records, relationships, notes, settings, saved data, enabled state and the original
+leaf. Both have one loaded-file and two Markdown inventories, 47 cached reads,
+zero raw reads and zero note writes. Application-wide metadata calls are
+51,670/51,681. Reload return is 447.5/384.3 ms; API readiness is 699.3/695.3 ms;
+Health readiness is 863.4/851.9 ms; longest heartbeat gap is 130.4/122.8 ms.
+These single warm-host samples demonstrate preserved integration, not a large
+whole-reload speedup, cold process startup or physical input-to-paint improvement.
+
+The foreground installed-constructor 10,000-Markdown fixture retains one inventory,
+10,000 metadata calls, all 1,428 relationships and zero I/O/writes. Before/after
+completion is 29.6/33.8 ms; longest heartbeat gap is 29.6/8.5 ms, with zero/four
+actual yields and ticks during work. This distinct synthetic fixture exercises the
+installed Parent/FileProperties constructors, not actual vault metadata costs.
+Live indexes, runtime instances, settings, data and original leaf are unchanged.
+
+Installed Live Preview navigation passes two first displays, ten tab switches and
+six repeated opens of existing linked notes: zero inventories, Parent rebuilds,
+note writes or frontmatter writes. It observes 34 raw/30 cached reads across the
+flow (28 raw reads during the first two displays and six during repeated opens).
+Tab switches perform no reads. Relationships, content, settings, saved data and
+enabled state remain unchanged; temporary tabs are detached and the original leaf
+restored. No test notes or settings are changed.
+
+The separate final build deploys the matching 7.3.16 artifacts only to the test
+vault; targeted GCM reload verifies the loaded version. Minimum Obsidian remains
+1.10.0; settings/API/storage contracts are unchanged. This backward-compatible
+patch is tested in the test vault and ready for the user's BRAT pull. Production
+is untouched and the app is not restarted. Physical iPhone/Windows, process cold
+startup, native browser scheduler execution and input-to-paint remain unverified.
+The remaining 122.8 ms whole-reload heartbeat gap is not resolved by this patch.
+See [7.3.16 release notes](release-notes/7.3.16.md) and
+[the detailed validation record](release-notes/parent-startup-candidate-20261007.md).
+
+## 7.3.15 — Read relationship metadata once per operation
+
+Relationship reindexing now shares one lazy metadata acquisition between the
+existing companion classifier and logical-property reader. Ordinary Markdown
+reindexing falls from three cache accesses to one; a public logical-property
+read falls from two to one. The value lives only within that synchronous call.
+The next operation reads current metadata again, including null/missing caches.
+No persistent cache/index, watcher, poller, new event handler, writer or async
+seed is introduced.
+
+Managed companion paths and existing positive companion ownership still skip
+metadata reads. Moved case-insensitive markers, explicit owner forgetting,
+legacy PDF/Canvas routing, duplicate-mapping rejection, native asset Markdown
+properties and public native-PDF cache reads retain their existing behavior.
+Live-file replacement, delete/rename, ignore rules and provisional resolution
+keep their current owners. Seed telemetry counts actual Parent-owned cache
+acquisitions, not every lookup inside other services.
+
+Twelve actual-Parent/actual-FileProperties regressions reproduce six failures
+before correction. The focused 25 Parent and 62 related checks pass. Final
+versioned declared tests pass 1,628 checks and the explicit supplemental gate
+passes 303, with zero failures, cancellations or skips; TypeScript passes.
+The suite and separate post-documentation build-only gates pass with deployment
+suppressed. The new 10,000-note fixture retains one inventory while cache
+accesses fall from 30,000
+to 10,000, with zero source reads/writes and unchanged input objects.
+
+Paired installed TEST warm reloads use the same 16,875 Markdown paths and retain
+2,733 GCM/182 Health records and the same relationship graph. Application-wide
+metadata accesses fall from 84,708 to 50,913; both samples keep the same
+inventories, 37 cached/one raw source reads and zero source writes. In this one
+hidden, unfocused desktop pair, reload return changes from 830.1 to 390.3 ms,
+API readiness from 1,107.2 to 631.6 ms and the longest Node heartbeat gap from
+544.1 to 147.7 ms. These are descriptive warm-host samples, not physical input
+or cold-start benchmarks. The 13-phase Live Preview check passes six tab
+switches and two remounts, observing 24 food/39 activity rows with zero render
+errors, observed long tasks or note-mutation attempts. One Navigator-owned
+first-use Markdown inventory and three normal workspace-only adapter writes
+remain; all eight consumers' saved data and enabled state stay unchanged.
+Build, reload and installed acceptance details are recorded in
+[7.3.15 release notes](release-notes/7.3.15.md).
+
+The relationship seed remains synchronous and still visits the full inventory;
+this removes duplicate reads, not all startup work. The remaining 147.7 ms
+heartbeat gap is not resolved by this patch. Physical mobile/Windows,
+foreground input-to-paint, Reading-mode rendering and overall UI-speed
+improvement remain unverified. Settings, public APIs, stored schema and minimum
+Obsidian 1.10.0 are unchanged. Production remains untouched.
+
+## 7.3.14 — Cooperate during authoritative source verification
+
+The existing authoritative native-record refresh now releases a real task when
+its shared elapsed-work budget reaches 8 ms. Retained-cache pruning, acquisition,
+parsing and index commits share one pending continuation across the existing
+eight read workers. Cheap cache-hit walks below the budget are not forced to
+yield merely because they visit many paths. No extra source scan, persistent
+cache/index, watcher, poller, automatic repair or retry is introduced.
+
+Every resumed slice checks the existing source generation/revision, disposal
+and captured path/file owner before accepting bytes or updating the index.
+Interrupted passes retain dirty work and cannot publish authoritative readiness.
+Started reads drain before an error releases the single-flight owner; scheduler
+errors stay intact, and late read completions do not schedule another task after
+failure. While that source owner is active, metadata-only events cannot replace
+its verified records with provisional cache values. Existing provisional
+metadata handling resumes after an unsuccessful owner is released.
+
+All 200 previous native checks remain covered; 31 new actual-service controls
+exercise task budgets, shared workers, failure drainage, cancellation, source
+replacement, duplicate blocking and metadata-only races. Final versioned
+7.3.14 gates pass 231 native, 303 supplemental and 1,616 declared checks, plus
+standalone TypeScript and a separate production-mode build-only gate, with
+deployment suppressed and byte-identical suite-build artifacts. An exact-TEST
+ordinary build deploys only main.js/manifest.json; targeted reload confirms
+7.3.14, preserving 2,733 GCM/182 Health records, all eight consumers' saved data,
+settings, enabled state and the original leaf. Installed acceptance passes; see
+[7.3.14 release notes](release-notes/7.3.14.md).
+
+A serialized synthetic actual-service real-heartbeat pair, without injected
+CPU cost, preserves source inputs and operation counts. At 10,000 notes/2,000
+native records, the longest heartbeat gap changes from 176.6 to 9.3 ms; at
+10,000 native records it changes from 350.1 to 16.2 ms. Total verification takes
+175.3/182.3 and 348.8/366.6 ms respectively: this is cooperation, not less total
+work or a total-speedup claim. A cheap warm edit still reads and indexes one
+file, retains 9,999 cache hits and uses zero helper tasks.
+
+The same finite installed-constructor probe retains complete synthetic source
+inputs and parser/index operation counts. At 1,000/10,000 files, longest
+heartbeat gaps change from 94.6/953.2 to 9.1/9.4 ms, with 11/77 real-task
+continuations instead of zero. Total verification is 94.6/95.6 and
+953.1/637.8 ms in these single samples, not a total-CPU speed benchmark. The
+installed 10,000-file warm edit takes 12 ms and legitimately yields once when
+its elapsed budget is reached; it still reads/indexes one source. This is
+distinct from the cheaper synthetic warm replay above.
+
+All 13 installed Live Preview phases pass six tab switches and two remounts,
+observing up to 24 food/39 activity rows without measured long tasks, phase/
+render errors or note-mutation attempts. Three UUID fixtures are exact-byte
+archived and all settings/data remain stable. One required Navigator Markdown
+inventory occurs in the first busy combined phase, with no getFiles inventory;
+zero navigation scans are not claimed. All windows were hidden/unfocused.
+
+The budget does not preempt an individual expensive operation, the Vault's
+inventory call or separate public snapshot materialization. Current-source
+safety retains the accepted Vault event contract; queued file replacement is
+covered, not detection of eventless changes to already committed paths. Public
+API versions, commands, settings, note schema and minimum Obsidian 1.10.0 remain
+unchanged. Foreground/physical mobile or Windows, Reading-mode and whole-process
+cold-start performance remain unverified. Production remains untouched.
+
+## 7.3.13 — Separate interface registration from initial data readiness
+
+Onload now finishes interface, command and event registration without awaiting
+layout-owned native discovery or journal recovery. One initial job starts after
+layout readiness; its native metadata inventory retains the existing bounded
+task slices and current-source ownership. Relationship discovery also waits for
+the initial layout. Normal note navigation does not start another initial job.
+The existing API remains unavailable until the complete native inventory,
+history activation and Daily Note configuration finish. API requests during
+startup receive an explicit unavailable response; late publication retains the
+existing availability event and unchanged public API versions.
+
+Early native creation, asset lookup, resolution, identity planning and task
+normalization join the same native setup owner before inspecting incomplete
+maps, reserving identities or writing. Startup file discovery events do not
+index pre-layout cache entries or adopt existing files as new task drafts.
+Current metadata, creation, deletion, rename, path reuse and replacement are
+collected from their current owners when the initial inventory runs. Explicit
+settings, migration and cache-miss rebuild callers remain synchronous. A complete
+explicit replacement can settle the paused initial job; a failed replacement
+rejects it without retry. Unload cancels initial discovery and prevents late
+work or API republication.
+
+Initial history recovery uses its existing activation owner behind native
+readiness. Disabling and re-enabling history joins the same native setup and
+current configuration epoch. Early task mutations and final API publication
+join replacement maintenance rather than entering an old recovery pass. The
+public metadata resolution observed during a settings await also seeds the
+late Daily Note identity owner, including hosts without the private initialized
+flag. Explicit whole-cache rebuilds still revoke that identity proof until the
+next public resolution event. This is identity readiness, not an extension of
+the separate Daily Note configuration adapter-read promise.
+
+Focused actual-service/lifecycle controls pass 361 checks, including all prior
+native checks, zero native/relationship inventories before layout, early
+commands, pre-layout source events, cancellation, replacement failure and
+history toggles. The complete onload/onunload executes with bounded UI and
+dependency facades, actual Native/Parent services and selected actual history
+and Daily services; these are not whole-host UI timing tests. TypeScript passes.
+Final versioned declared tests pass 1,616 checks and the explicit supplemental
+gate passes 272, without failures, cancellations or skips. The suite's build
+and mandatory separate post-documentation build-only gate pass with deployment
+suppressed and identical artifact hashes. An exact-vault-guarded ordinary final
+build deployed only main.js/manifest.json to TEST, preserving all four tested
+artifact hashes and saved data. Targeted reload confirms loaded 7.3.13; see
+[7.3.13 release notes](release-notes/7.3.13.md).
+
+The matched installed warm-reload corpus retains 16,328 Markdown paths with an
+identical path digest, 2,733 GCM/182 Health records, one inventory per service,
+40 cached/four raw reads and zero mutations. Metadata accesses are 82,006 before
+and 82,011 after; all eight consumers' settings/data, enabled state and the
+original leaf remain unchanged. In this single hidden/unfocused pair, onload
+return changes from 1,080.8 to 439.0 ms, with the new native API still unavailable
+at return; complete API readiness is 697.2 ms and Health readiness 856.4 ms
+(before: 1,080.8/1,137.9 ms). The longest Node heartbeat gap is 305.3/212.7 ms.
+These include instrumentation and other consumers, vary between samples and
+are not a cold-process or foreground/physical speed benchmark.
+
+Both installed 13-phase Live Preview runs pass six tab switches and two
+remounts with 24 food/39 activity rows observed, without measured long tasks,
+render errors or note-mutation attempts. Each run's three UUID fixtures are
+exact-byte archived; settings/data remain unchanged. A getMarkdownFiles/getFiles
+pair in the first combined phase is attributed to Navigator 8.2.3's storage/
+search/React-memo owner, not GCM. The counter includes fixture/background work,
+so its coupling to navigation is not proven and zero navigation scans are not
+claimed. The host was hidden/unfocused; Reading, physical mobile/Windows and
+whole-process cold UI readiness remain unverified.
+
+Settings, schema, commands and minimum Obsidian 1.10.0 are unchanged. No new
+persistent index/cache, watcher, poller, repair or retry is introduced. The
+relationship seed still contains synchronous work; the first authoritative
+source verification remains separate from metadata discovery. Individual path
+inspection is not preempted. This corrects the loading barrier described by
+[Obsidian's load-time guide](https://docs.obsidian.md/plugins/guides/load-time),
+but does not establish faster whole-process cold startup, foreground input to
+paint, physical mobile/Windows or Reading-mode performance. Finances late API
+registration and Controller's private early maintenance are separately versioned
+consumer changes; this GCM-only release does not replace those owners.
+Production remains untouched.
+
+## 7.3.12 — Bound initial native-record discovery work
+
+The initial native-record metadata inventory now releases a real task between
+slices of at most 256 paths or 8 ms of observed work. Existing metadata/create/
+modify/delete/rename listeners are installed before the first yield. Current
+file objects and newly accepted event sources retain ownership, so an older
+queued cache value cannot restore a deleted record or replace newer metadata.
+Each file still uses the 7.3.11 operation-local inspection, including current
+nested settings, classification, aliases, ambiguity and duplicate blocking.
+The full inventory still runs once, without discovery body reads or writes.
+
+Onload awaits that owned inventory before publishing the existing native API.
+Unload cancels initial discovery and guards every straight-line startup await,
+preventing an obsolete onload continuation from publishing the API again.
+Explicit settings, migration and cache-miss rebuilds remain synchronous; a
+complete explicit rebuild can replace paused initial discovery, while a failed
+replacement rejects it without restarting. Public API versions, settings,
+stored schema and minimum Obsidian 1.10.0 remain unchanged.
+
+A selected-note rename read also owns its captured file/path until it settles.
+Newer accepted metadata, modification, another rename, replacement, deletion
+or unload invalidates the awaited result. A reused old path remains owned by
+its replacement without suppressing the legitimate new target. The transient
+read token stores no note content and is removed on settlement; there is no new
+persistent source cache, watcher, poller, automatic repair or retry.
+
+All 175 actual-service native-record checks and TypeScript pass, including 29
+new startup/lifecycle controls. The real onload/onunload prefix tests cover
+publication and cancellation with modeled UI boundaries; native discovery,
+inventory and event ownership are actual service code. Controlled task tests
+cover scheduler, one-shot MessageChannel and timer routes, both count/time
+bounds, current nested mappings, explicit replacement, source races and zero
+discovery source I/O. Independent review found no blocking data-safety issue.
+The final versioned declared suite passes 1,609 tests and the explicit
+supplemental suite passes 247, with zero failures, cancellations or skips.
+TypeScript and the suite's production-mode build pass with deployment
+suppressed. One source-shape assertion was strengthened to require the new
+unload guard between Daily Note readiness and API publication; no assertion
+or test was dropped. The required separate build-only gate passes with matching
+hashes; a normal final build deployed only changed main.js/manifest.json to
+the explicitly guarded Test vault. Targeted reload confirms loaded 7.3.12.
+A separate actual-source corpus preserves complete index state and input
+metadata through 609 operations across seven configurations.
+
+Matched installed warm-reload samples retain 2,733 GCM/182 Health records,
+one inventory for each service, 39 cached/two raw reads and zero note mutation
+attempts. Metadata accesses are 80,228 before and 80,229 after. The longest
+hidden-host Node heartbeat gap falls from 462.9 to 297.2 ms, but reload return
+increases from 661.5 to 742.4 ms and total Health readiness from 741.6 to 820 ms.
+This is bounded task cooperation, not faster total completion or foreground
+input-to-paint evidence. A small read-only diagnostic CLI query occurred during
+the after sample; the samples include other consumers and instrumentation.
+Remaining synchronous relationship lookups are outside this patch.
+
+All 13 desktop Live Preview smoke phases pass through six tab switches and
+two remounts, retaining observed 24 food/39 activity rows without measured
+long tasks, Health render errors or note-mutation attempts. Three UUID fixtures
+are exact-byte archived. Settings/data, enabled plugins and the original leaf
+remain unchanged. The host was hidden/unfocused; a foreground attempt did not
+establish visibility. Full evidence and tested artifact hashes are in
+[7.3.12 release notes](release-notes/7.3.12.md).
+
+The bound is checked between paths; one unusually expensive inspection or
+inventory call is not preempted. Onload still waits for complete discovery and
+[Obsidian loads plugins before interaction](https://docs.obsidian.md/plugins/guides/load-time), so this is not a promise of faster
+whole-process cold startup or earlier cold UI readiness. Relationship lookup,
+authoritative disk verification and other plugins' work remain separate.
+Physical mobile/Windows latency and cold-process UI readiness are unverified;
+production installation remains the user's BRAT pull.
+
+## 7.3.11 — Inspect each indexed record once
+
+Cold native-record indexing previously classified the same note/profile several
+times while collecting recoverable IDs, checking ambiguity and selecting its
+final envelope. Those checks now share the existing operation-local inspector
+and one prepared configuration within each synchronous file-index operation.
+The accepted inspection is reused rather than requested again. Every identity,
+read-alias, classification, timestamp, canonical-calendar and blocking check
+still runs. Public inspection results retain detached profile copies.
+
+The next file or metadata event checks its current frontmatter and the
+value-based settings signature again, including nested mapping edits made
+without a save. There is no cross-record result cache, new watcher, async
+startup, schema change, repair or note write. Setup still completes its metadata
+index synchronously. Health and Controller own their separate metadata scans;
+the async authoritative source verification required for mutations/snapshots
+is unchanged and must not be confused with this metadata-only startup pass.
+
+Three before-failing 10,000-note cold-setup regressions now require one settings
+signature per file and one classifier evaluation per exact prepared profile.
+Ordinary notes fall from 130,000 to 30,000 evaluations; canonical records from
+150,000 to 30,000; 26 mapped kinds from 1,110,000 to 270,000. The classifier's
+envelope copies fall from 60,000 to 10,000 for canonical records and from
+110,000 to 20,000 for the mapped fixture. These counts do not include every
+match-set/object copy. Each pass inventories once, reads 10,000 metadata entries
+and performs zero source reads or writes, preserving input metadata.
+
+All 146 focused native-record tests and TypeScript pass. Independent review ran
+60 relevant regressions without failures. A separate baseline/proposed corpus
+matches complete index state across 609 index operations, including conflicting
+and malformed evidence, legacy aliases/migration, classification variants,
+repeated changes and identity removal. An isolated actual-source setup probe's
+mapped synchronous elapsed time falls from about 2.27s to 1.21s on this Mac;
+this includes instrumentation and is not installed cold-start, foreground
+input-to-paint or physical mobile/Windows evidence. The final versioned declared
+suite passes 1,609 tests and the explicit sequential supplemental suite passes
+218, without failures, cancellations or skips. TypeScript, the suite's
+production-mode build and a separate final build pass with deployment
+suppressed. A normal final build deployed only main.js/manifest.json to TEST;
+targeted reload confirmed loaded 7.3.11 and unchanged settings. Exact loaded
+constructor/setup replay preserves every synthetic ID/kind/title and metadata
+input while reducing prepared-profile accesses to 10,000 in all three fixtures
+and avoiding repeated public-inspection/profile-copy wrappers. It keeps one
+inventory, 10,000 metadata accesses, one configuration resolution, zero source
+reads/writes and the same five modeled event listeners.
+
+The installed mapped setup pair falls from about 2.34s to 1.19s. This is one
+isolated replay on a hidden/unfocused desktop host, not a full cold-process or
+physical UI benchmark. Shared Live Preview smoke checks retain observed Health
+widgets through six tab switches and two remounts, with no measured long tasks,
+phase/Health errors or note-mutation attempts. Three synthetic fixtures are
+exact-byte archived; plugin settings remain unchanged. One core workspace
+adapter write observed at idle is not a note writer. Full results, boundaries
+and hashes are in [7.3.11 release notes](release-notes/7.3.11.md).
+This backward-compatible patch keeps Obsidian 1.10.0 and existing public APIs,
+settings and note schema. Production installation remains the user's BRAT pull.
+
+## 7.3.10 — Keep recurring title work in visible panes
+
+The existing mobile 900ms title/link refresh now uses the shared leaf visibility
+predicate before inspecting titles, icons or rendered links. Retained hidden,
+detached and collapsed Markdown panes no longer traverse their rendered link
+trees each tick. Every eligible split pane still refreshes, including panes
+other than the active tab. Eligibility geometry and computed-style reads finish
+for the batch before title, icon or link work begins.
+
+A retained hidden pane catches up on the next existing tick after it becomes
+eligible. This preserves mobile title/icon remounts and links whose target first
+appears or becomes available at a renamed path. Direct refreshes, scheduled
+remount callbacks, Markdown postprocessors and metadata-driven updates retain
+their existing owners. Authored aliases, focused title editing, strict Source
+filename display, disabled inline menus and native/legacy mode behavior remain
+intact. The predicate checks connection, minimum dimensions and computed
+display/visibility; it does not establish viewport intersection or foreground
+focus. Settings, APIs, note content and minimum Obsidian 1.10.0 are unchanged.
+No cache, watcher or timer is added.
+
+Operation-count and lifecycle regressions execute the actual title service,
+shared visibility helper and icon lifecycle methods with modeled DOM/Obsidian
+boundaries. The final versioned declared suite passes 1,609 tests; the sequential
+supplemental suite passes 214, with zero failures or skips. TypeScript and the
+production-mode suite build pass with deployment suppressed. A separate normal
+build deployed only changed main.js and manifest.json to the Test vault, and a
+targeted reload confirmed 7.3.10 with unchanged runtime settings.
+
+Exact loaded-method replay on an isolated service with real synthetic DOM and
+the visibility helper compares 12 ticks over two eligible panes, one hidden
+pane and one detached pane. Link resolutions fall from 48,000 to 24,000 and
+rendered-root/title-icon owner calls from 48 to 24. With every pane hidden or
+detached, 48,000 resolutions become zero. Activating the retained hidden pane
+refreshes all three eligible panes on the next tick. This models workspace,
+metadata and the title/icon owner; it does not patch the live service. Installed
+desktop Live Preview smoke checks retain observed Health widgets through six
+tab switches and two remounts, with no measured long tasks, Health render errors
+or navigation note-mutation attempts. Settings remain unchanged and exact-byte
+fixtures are archived. Results, boundaries and artifact hashes are recorded in
+[7.3.10 release notes](release-notes/7.3.10.md). Physical mobile and Windows
+responsiveness require separate validation; these checks do not establish that
+all swipe, tab-switch or loading stalls are fixed. The smoke-test host was hidden
+and unfocused; cold startup and Reading rendering remain unverified. Production
+installation remains the user's BRAT pull.
+
+## 7.3.9 — Measure mobile clearance only for its consumers
+
+Ordinary mobile note navigation no longer measures every document element's
+computed style merely to maintain an unused bottom offset. Pane-mounted mobile
+menus use their existing 58px/safe-area anchor. The shared offset is measured
+only while a connected hover Base or fallback fixed menu actually consumes it.
+Their first mounts request measurement immediately after insertion and before
+positioning/rendering; existing keyboard/layout updates and obstruction
+geometry remain intact. Hidden connected consumers conservatively retain
+measurement. No new cache, watcher, timer, setting, note write or public API is
+added. The separate 900ms title/link sweep is unchanged.
+
+Mobile touch/pointer handlers used for keyboard-overlay interaction are now
+removed during teardown, preventing callbacks from accumulating across reloads.
+Seven before-failing regressions cover unused-offset scans, first-mount
+ownership and listener cleanup. Twelve focused tests and 55 adjacent checks
+pass, plus TypeScript and independent review. A 10,000-element synthetic
+fixture's 12 unchanged navigation passes now do zero whole-document inventories,
+computed-style reads or geometry reads with ordinary menus enabled or disabled.
+Actual hover/fallback consumers preserve their previous clearance results.
+These are source-method counts with modeled DOM boundaries, not physical
+mobile/Windows latency measurements or a claim that all navigation stalls are
+fixed.
+
+This backward-compatible patch keeps minimum Obsidian 1.10.0. The final versioned
+declared suite passes 1,597 tests and the sequential supplemental suite passes
+214, with no failures or skips. The separate final build deployed to the Test
+vault and a TEST renderer reload confirmed 7.3.9. Exact loaded-method comparisons in
+isolated mobile fixtures reproduce 120,000 style reads becoming zero and five
+leaked touch/pointer callbacks becoming zero, with unchanged clearance results.
+These are modeled host tests, not physical mobile measurements. Installed
+desktop Live Preview navigation retained Health widgets, made no note mutation
+attempts and preserved settings. Details and hashes are in the
+[7.3.9 release notes](release-notes/7.3.9.md); production remains the user's BRAT pull.
+
+## 7.3.8 — Reuse prepared profiles during native-record inspection
+
+Native-record inspection now shares the existing prepared profile objects across
+its identity-evidence, readable-profile and current-kind checks. Previously the
+readable pass cloned those profiles, defeating the existing operation-local
+reuse map and repeating classification of the same frontmatter. Normalized
+alias deduplication, all identity/conflict validation, and detached public
+profile copies are preserved. Reuse still ends when one inspection returns;
+the next inspection reads current frontmatter and current settings. There is
+no new cache, index, watcher, timer, public API, setting or note write.
+
+Before-failing synthetic tests inspect 10,000 native titles twice. Per pass,
+canonical-profile classifier calls fall from 40,000 to 30,000; twelve configured
+kinds with a scalar alias each fall from 490,000 to 250,000. The classifier's
+raw-to-envelope copies fall from 20,000 to 10,000 in each fixture. These counts
+refer to that classifier copy only, not every object allocation or merge copy
+inside the API. All 142 focused native-record tests pass with exact operation
+counts. Coverage retains normalized/reordered aliases, custom mappings,
+detached results, live title/status changes, scalar-versus-list classification,
+conflicting evidence and nested settings edits without a save.
+
+This backward-compatible patch keeps minimum Obsidian 1.10.0 and changes no
+Navigator metadata invalidation or sorting behavior. Synthetic inspection and
+title-sort evidence does not establish installed mobile/Windows latency or fix
+every possible navigation stall. The final versioned declared suite passes
+1,588 tests and the supplemental suite passes 214. Installed 7.3.7/7.3.8
+comparison preserves all 30,000 synthetic inspection results, inputs and
+settings. The [7.3.8 release notes](release-notes/7.3.8.md) record the separate
+build, Test-vault reload, measurement limits and artifact hashes. Production
+installation remains the user's BRAT pull.
+
+## 7.3.7 — Keep heading suggestions in their owning editor
+
+Heading-link suggestions search only while the active Markdown editor is focused
+in Source or Live Preview. Typing in sidebar search, a modal, global search or
+another input no longer searches the retained heading cursor's vault. Keyboard
+navigation and mouse selection also verify the popup still belongs to the
+current editor and file, so a stale popup cannot consume unrelated keys or edit
+the previous note.
+
+Searches now use Obsidian's public `editor-change` notification after text changes
+are applied, including changes with no keyup. Keyup searches are limited to
+arrows, Home/End and PageUp/PageDown; the popup's existing cursor context prevents
+a repeat search when that cursor has not moved. Typing therefore searches once,
+popup arrows retain their selection without rescanning, and Escape stays closed
+after keyup. Modified and composing keydowns remain editor/IME-owned. Captured
+input only dismisses an ineligible popup, and the unowned keydown timeout is
+removed. Matching, ranking and link formatting are unchanged. There is no new
+state store, timer, cache, poller, setting, schema change or note maintenance.
+
+Before-failing tests reproduce three vault inventories and 12,000 metadata reads
+from one unrelated keystroke with a 4,000-note synthetic vault; the fixed route
+does zero. All 37 focused tests and six browser timing scenarios pass, including
+stale selection, Reading mode, modifiers, composition, no-keyup changes and
+unload. The browser check uses real CodeMirror DOM/mutation processing but
+simulates Obsidian's after-commit callback and does not render the popup. The
+GCM list suite also no longer reads three files from the retired standalone TPS
+Kanban repository; all 55 active List tests and shared-utility coverage remain.
+
+This backward-compatible patch keeps minimum Obsidian 1.10.0. The final versioned
+declared suite passes 1,588 tests and the supplemental suite passes 210, with no
+failures or skips. Installed host-boundary evidence, build details and artifact
+hashes are recorded in the [7.3.7 release notes](release-notes/7.3.7.md). This fixes
+a specific heading-input path, not every possible swipe, note-opening or
+tab-switch delay. Physical mobile/Windows latency and IME acceptance remain
+separate. Production installation remains the user's BRAT pull.
+
+## 7.3.6 — Keep conflict-aware snapshots linear
+
+Native-record conflict diagnostics now collect IDs from the two existing
+ownership indexes once per snapshot, instead of rescanning both indexes for
+every conflicting file. The reverse lookup exists only during that call. Kind
+mapping keys are also resolved once for the diagnostic batch. Sorted paths and
+IDs, kind ordering, detached frontmatter, uniquely owned records, and all strict
+identity/mutation guards remain unchanged. There is no new persistent index,
+cache, watcher, repair, setting, note write or API change.
+
+This fixes a conflict-heavy test-vault regression exposed while validating
+Controller 3.1.4's reuse of conflict-aware discovery. A 5,050-note fixture with
+2,550 conflicts preserves identical records and diagnostics across three warm
+snapshots while ownership-index entry visits fall from 32,147,700 to 22,653;
+those snapshots make zero source reads. The before-failing operation-count
+regression also covers duplicate/blocked ownership overlap, several IDs on one
+path, custom kind keys, and detached nested frontmatter. All 138 focused
+native-record tests pass. These are synthetic operation counts, not installed
+or physical-device latency claims.
+
+This backward-compatible patch keeps minimum Obsidian 1.10.0. Full-suite,
+installed test-vault validation, final build and release hashes are tracked in
+[7.3.6 release notes](release-notes/7.3.6.md). Paired installed verification with
+Controller 3.1.4 preserves all reminder matching sets and completion/deletion
+behavior. Production installation remains the user's BRAT pull.
+
+## 7.3.5 — Keep Calendar navigation out of idle vault scans
+
+In whole-note mode the persistent Calendar shortcut shows **Calendar**, or its
+running elapsed timer, without an automatically polled event count. Previously
+each visible badge queried every Markdown note about every eleven seconds and
+also read historical checkbox bodies. Opening the calendar popover still queries
+current note and external events, including creates, reschedules and deletions;
+native mode no longer includes retired inline tasks. Legacy-mode counts and
+inline display remain unchanged. This removes the expensive background query
+instead of retaining a potentially stale count or adding another cache/watcher.
+
+Four synthetic badges across initial and repeated refreshes now perform zero
+calendar-count inventories, body reads or metadata inspections while still
+calling the active-timer service. That focused test mocks timer retrieval;
+enabled time tracking retains its separate existing session scan. The installed
+7.3.4 Test-vault baseline, with time tracking disabled, spent roughly 1.3–1.4 seconds
+per badge refresh across 13,812 notes. That hidden-window service timing is not
+physical-phone or foreground responsiveness evidence. Explicit popover queries
+still enumerate notes; no note schema, setting, writer, reminder policy or
+minimum Obsidian version (1.10.0) changes. Final tests, installed verification
+and hashes are in [7.3.5 release notes](release-notes/7.3.5.md). Production
+installation remains the user's BRAT pull.
+
+## 7.3.4 — Keep whole-note deletion out of legacy body cleanup
+
+Whole-note mode no longer runs the retired inline-link body cleaner after deleting a file. That route bypassed the shared body-write boundary introduced in 5.0.0 and still inspected every Markdown body. It now checks stored parent/attachment properties and invokes the existing protected writer only for matching candidates. Historical body links stay authored, including unchecked items and links to deleted notes. Current-source atomic mutations, exclusions, ambiguity handling and deletion serialization are retained. The legacy-mode body cleaner retains its original current-body behavior. No new index, watcher, cache, setting or automatic repair is introduced.
+
+Relationship cleanup is a best-effort metadata preflight, not a full-vault integrity sweep: a newly added relationship whose metadata has not arrived can remain authored. A positive cache match never authorizes a stale write; current values and exclusions are checked at the existing atomic boundary.
+
+A 4,000-note regression and a 20-request unchanged burst verify zero native body inspection/write work, including historical list links. The installed 7.3.3 baseline read 13,803 bodies and took 1,244 ms for a synthetic deletion in the background Test vault. This is an operation measurement, not a phone or foreground input-to-paint result. This patch retains 7.3.3's removal of the passive completion rollback and 7.3.2's atomic stale-write protection. Synced plugin files must actually be loaded on every device; Obsidian mobile may need a full restart after downloading an update.
+
+This backward-compatible patch keeps Obsidian 1.10.0 and all saved settings. Final suite, installed after-operation results and artifact hashes are recorded in [7.3.4 release notes](release-notes/7.3.4.md).
+
+## 7.3.3 — Keep synced completions completed
+
+Metadata and file-change observers no longer roll a completed note back to its previous status when its body contains unchecked items. The old external checklist guard removed the authored status and completion date before displaying a modal. A completion received through Sync, another editor, or another plugin could therefore become overdue again even though its writer saved it correctly. The fix removes that post-save rollback observer and its status-history/timer machinery; it does not add a repair pass, deduplication, retry, suppression store, or sync protocol.
+
+The existing **Check for open checklist items** preference still applies before GCM-owned status actions save. Their Ignore, Cancel, Open, parent-check, and write-guard behavior is unchanged. A passive metadata refresh cannot reopen a saved note or ask the user to reapprove a completion from another device. Authored `status`, `completedDate`, other frontmatter, and body bytes are left intact; direct YAML or third-party writers still own their completion date. Settings and the minimum Obsidian version (1.10.0) are unchanged. This patch retains the 7.3.2 atomic write/rename protection. Use Controller 3.1.2 for confirmed, current-source reminder publication.
+
+Validation and installation evidence are recorded in [7.3.3 release notes](release-notes/7.3.3.md). A released artifact, a loaded production plugin, a Relay upload, and cancellation on a receiving phone remain separate checks.
+
+## 7.3.2 — Keep property edits on their current note
+
+Closed-note property changes now commit through Obsidian's atomic `Vault.process` boundary. The writer checks the same live file object, captured path, and exact source bytes before applying its already-computed change. A queued automatic rename can no longer leave a write recreating the old filename; a newer completion or other edit cannot be replaced by an older property snapshot. Conflicting, deleted, or replaced targets fail without a success notification. An asynchronous mutator runs once, with no automatic retry. Source-editor behavior is unchanged, and unchanged property actions still perform no write. Successful closed-note edits retain the BOM, header line-ending style, and exact body bytes, including mixed line endings.
+
+This is a backward-compatible root-cause fix, not a duplicate-note repair. Existing duplicate files are left untouched. Settings, APIs, stored note format, and minimum Obsidian 1.10.0 are unchanged. A property action refused because of a concurrent change must be explicitly performed again against the current note. Focused regressions cover the queued rename, newer completion, queue-time source and identity replacement, deletion, byte preservation, asynchronous single execution, and unchanged bursts. The final no-deploy declared suite passes 1,529 tests with zero failures, skips, or cancellations, including TypeScript and the production build. The 109-check focused selection includes all 18 new race cases. A separate stable build passed and deployed only changed main.js and manifest.json into the Test vault; all four shipped artifact hashes match source.
+
+Installed Test-vault validation through the official Obsidian CLI reloaded and confirmed GCM 7.3.2 and Controller 3.1.2. Real Controller completion calls reached the real GCM setter and automatic rename: the latest synthetic fixture went from six projected reminder triggers to zero, retained exactly one file, and preserved its body. A paused stale property mutation was then refused after a newer completion, with one mutator invocation and no unwanted property or reminder triggers. Both fixtures were archived after assertions. GCM and Controller settings stayed byte-identical; recurrence session state changed normally for the synthetic QA paths. This is a Test-vault-validated BRAT handoff, not a production installation. See the [GitHub releases](https://github.com/ZachTish/TPS-Global-Context-Menu/releases) for publication status and [7.3.2 release notes](release-notes/7.3.2.md) for hashes and validation limits.
+
+## 7.3.1 — Keep metadata refreshes read-only for completion dates
+
+Metadata refreshes, file modifications, and renames no longer infer or remove a note-level completedDate from its status. The retired background reconciler could timestamp an old complete or cancelled note during startup or after an unrelated Kind migration, making the refresh look like a new completion. GCM now leaves an authored or missing date alone until a status-edit action owns the change.
+
+GCM's explicit whole-note status controls and status API still add a completion date when setting a completion status and remove it when reopening a note. A direct YAML edit or another plugin that changes only status must also manage completedDate if it needs one. Existing settings, stored note format, and the minimum Obsidian version (1.10.0) are unchanged; there is no automatic backfill or cleanup of existing notes.
+
+Focused regressions execute startup-style metadata and modify bursts, an external status change, and an explicit GCM status edit. The full declared suite, final build, Test-vault deployment/reload, runtime-state preservation, and artifact hashes are recorded in [7.3.1 release notes](release-notes/7.3.1.md). The Test vault confirms the shipped artifact; production installation remains the user's BRAT pull.
+
+## 7.3.0 — Migrate configured kind references together
+
+**Rules & fields → Custom fields → Record classifications → Apply** now previews and moves dependent configuration when a configured kind-list path changes. Exact GCM Navigator rule conditions, Custom field kind scopes and property conditions, TPS Notebook Navigator saved searches, hidden property entries and property appearances, and literal native Base `list(<configured key>).contains("<old path>")` filters follow the selected mapping. **Rename stored value** on a configured list-valued Kind field also carries those references when it renames that path globally. A shared path moves only record-specific rules with an AND-matched identity; generic references block with their location for review. Discriminator edits move paired rule and Base filter conditions and exact Navigator identity references. Global **Rename property key** also moves recognized Base filter/formula/view property references and Navigator property visibility, search, sorting, grouping and appearance keys. No taxonomy path, discriminator value, or frontmatter key is built into the migration code.
+
+The existing confirmation previews note, Base and settings-reference paths together. Unrecognized Base expressions, shared-path references without a unique identity, occupied Navigator destinations, changed settings, and changed source files block before mutation. Confirmed work uses the existing source-checked migration transaction and recovery copy; Markdown bodies, unrelated formulas, manual tags and file names are preserved. Daily Note and Calendar Event templates are Markdown inputs to the same exact classification converter; their manual `template` tag and body remain. Writer-only changes still only change future writes and retain old classifications as read aliases. Configure consumers while enabled so their settings can be included. No watcher, open-time repair, new persisted schema, or new settings destination is added. The five-destination hub and narrow-screen layout are unchanged.
+
+Custom property menus, stacked rows and native previews now read the note's authored frontmatter, including a list-valued Kind field. Internal record identity remains separate for kind scopes, so a field can target either the configured list path (for example `task/todo`) or the matching internal record type (`task`) without displaying the internal type in the Kind control. The configured Kind property key is resolved case-insensitively; duplicate case variants hide scoped fields rather than choosing an arbitrary value. A food record whose classification changed in settings remains eligible for Health's stacked properties while the inline-menu ignore rule is active. These are presentation/read fixes and do not rewrite notes.
+
+This additive settings migration is a minor version. Minimum Obsidian remains **1.10.0**. The 7.3.0 release notes record the declared tests, final test-vault deployment/reload, UI verification, and artifact hashes. Physical iPhone and production behavior require the user's BRAT installation and validation.
+
+## 7.2.0 — Configurable native Base New routes
+
+**Rules & fields → Custom fields → Base new-note routes** can bind one vault-relative `.base` file and exact view name to a configured internal record type. For example, a Food Log view can create a `food-entry` record without specifying its kind path in code. GCM reads the current Record classifications writer, including any shared-path identity, and writes the complete native-record identity and configured frontmatter in one create operation. The destination follows **Advanced → Atomic note root/layout**. The initial title and filename are `Untitled`; the shared **Menus & surfaces → After creating a note** preference controls preview, open, or stay. Opening uses Obsidian's own Page Preview/Open behavior, with Open on mobile and title rename focus after Open.
+
+The persisted setting is `nativeBaseCreateRoutes: [{basePath, viewName, recordKind}]`; it defaults to an empty array. A route is only saved when the Base file exists and the record type has an enabled writer. The selected editor is transient UI state. Route matching is exact; other views and Bases retain core New. A matching route with an invalid writer, duplicate entry, missing Base file, or configured Base new-note template fails with a visible error before file creation. Routed creation uses the GCM atomic root/layout rather than Base `newItemFolder`; Base template content and filter-inferred defaults are not applied. Keep route-specific fields in an owning workflow when they are required. Finance IDs, calendar recurrence, Daily Note identity, and other domain-specific creation are deliberately not inferred from a Base filter. Existing notes, templates, and Bases are unchanged by enabling a route.
+
+The five-destination settings hub and default Rules & fields route remain unchanged. The Custom fields page has one selected Base-route editor at a time; Add/Edit buttons focus the Base path input. Existing namespaced settings CSS keeps text controls stacked on mobile, and native buttons/selects retain keyboard and screen-reader labels. Focused routing tests cover exact Base/view matching, duplicate taps, invalid routes with zero core writes, template conflict, mobile-safe presentation dispatch, and nonmatching native behavior; the native-record suite covers full-envelope creation and configured classifications. Full declared tests, final build, installed Test-vault verification, and artifact hashes are in [7.2.0 release notes](release-notes/7.2.0.md). Minimum Obsidian remains 1.10.0; physical iPhone and production behavior require user validation after BRAT installation.
+
+On one desktop Test-vault creation, the immediate Page Preview custom Kind field showed Empty even though the Base row and stored YAML had the configured list value. Reopening that note after metadata settled showed the correct Kind value. This preview timing remains a presentation limitation; it does not change the created record.
+
+## 7.1.0 — Configured Daily Notes and shared record paths
+
+Daily Note lookup, reconciliation, task-date inheritance, and GCM-owned creation now use the configured `dailynote` classification and the **Scheduled** custom field's key. A configured list path such as `category: [journal/day]` and a renamed date field such as `startsAt` work without a built-in path or key. When a Daily Note template has no frontmatter, creation writes that classification without adding a tag; the historical `dailynote` tag is used only when no mapping is configured. A template with frontmatter keeps its authored classification. Existing legacy Daily Note markers and `scheduled` remain readable; conflicting old/new dates or mixed record kinds still block reconciliation. Changing the Scheduled key invalidates the existing Daily Note candidate index. This corrects the existing classification and creation owners without a watcher, delayed repair, vault rewrite, or new setting.
+
+**Rules & fields → Custom fields → Record classifications** now offers an optional **Shared-path identity property/value** for a kind-list mapping. It is useful when several internal record types use the same visible list value: Finance transactions and investments can share `kind: [transaction/financial]` while a configurable `type` value identifies each. Other shared groups can use any configured key and value. GCM writes the field on new records, uses it to distinguish records after a cold index, and refuses missing or conflicting identity on the shared list. Explicit legacy aliases remain readable. The `frontmatterKinds` snapshot API exposes the configured discriminator; `encode`, `decode`, `matches`, and `nativeRecords` use it. Changing this setting previews affected notes, asks for confirmation, and updates their frontmatter and the mapping together with the existing recovery mechanism. Ambiguous records, stale previews, and conflicting destination fields block the change. Confirmed custom-property key/value migrations also update matching kind-list and identity settings. A separate one-time conversion of old classifications is still required when adopting a new kind-list path.
+
+The existing five-destination settings hub and default Rules & fields route are unchanged; the two inputs and review action appear beside the selected kind-list mapping, including on narrow screens. Their state is the existing per-record mapping, with no separate persisted UI state. Minimum Obsidian remains 1.10.0. Focused tests cover alternate Daily Note classification/date settings, shared paths and conflicting kinds, configured-key creation, confirmed setting changes and rollback, and all planned shared record groups after cold indexing. The full suite/build and Test-vault reload are documented in [7.1.0 release notes](release-notes/7.1.0.md). Production installation remains the user's BRAT pull.
+
+## 7.0.1 — Retire configured legacy tags on a kind-list write
+
+When a record writer uses a configured kind-list classification, GCM now removes obsolete tag aliases for record types that share that same configured list value. This includes an old transaction tag on an investment transaction whose independent Finance `type` identifies it. GCM keeps every unrelated manual tag and still rejects a tag or list value that classifies an unrelated record type. The cleanup runs only in the requested create/update write; reading or navigating a note never rewrites it, and the one-time vault migration remains separate. The mapping key, value, and retired aliases all come from GCM settings.
+
+This patch keeps the `frontmatterKinds` v2 API and all persisted settings unchanged. Minimum Obsidian remains 1.10.0. The Finance legacy investment read/update path also needs Finances 2.1.1. Focused tests cover shared aliases, manual-tag preservation, repeat writes, and conflicting classifications; the full suite and installed Test-vault verification are documented in [7.0.1 release notes](release-notes/7.0.1.md).
+
+## 7.0.0 — Configurable list-valued kind classification
+
+GCM's **Rules & fields → Custom fields → Record classifications** remains the single place to configure how TPS record types are stored. Add any lowercase record-type name, then choose its kind-list property and nested path; no parent category or subtype path is built into the writer. The selected record editor supports a complete tag, a parent/subkind property pair, a single scalar property, or a list value. The parent field is free text. Previous forms can be added or removed as explicit read aliases. **Save writer** changes future writes without scanning notes; **Apply** retains the confirmed note-and-generated-Base migration with recovery. **Remove mapping** confirms before removing only the selected setting; it never edits notes, but those notes stop being identified by that record type. A per-type **Create new records** switch can keep an undecided legacy classification readable while refusing new writes. No default taxonomy, automatic note repair, startup scan, or note rename is introduced.
+
+The persisted `nativeRecordKindPropertyKeys` entry may now be `{primary:{kindList:{key,value}},aliases:[{tag}, {scalar:{key,value}}, {parentKind,key,value}],writeDisabled?:boolean}`. Existing direct tag/property definitions remain valid. List paths have two or more nonempty segments and use the configured key; multi-value lists retain unrelated values when an update supplies the original frontmatter. Multiple record types may share an identical visible list path. An unhinted read leaves that shared list authored as-is; a consumer that already knows the record type can pass it as a hint. Conflicting distinct classifications still fail closed. Native record inspection reads the current definition and explicit aliases, while new native records write only the selected primary classification. Native records sharing a path need an existing independent identity signal for reverse lookup; a shared path alone cannot recover their internal subtype. Canonical calendar records keep template-authored list values; their structural identity still comes from the calendar ID. The Create task modal no longer offers a hardcoded Priority selector or writes a priority property. Authors can add priority as a manual tag through the ordinary Tags field. Existing priority properties are left for the separately reviewed one-time note migration.
+
+`api.frontmatterKinds` is **v2**. Existing `encode`, `decode`, and `definition` methods remain; `encode(fields, existingRaw?)` can preserve unrelated values in the original kind list. `decode(fields, expectedKind?)` accepts a caller's existing internal record type to identify a shared visible path, even when the same type also matches its old tag alias; it does not write a discriminator. A conflicting alias on another type remains an error. New `readDefinitions(kind)`, `matches(fields,kind)`, `writerEnabled(kind)`, `listTypes()`, `snapshot()`, and `propertyKey(id)` expose effective GCM settings to Finance, Health, and migration tooling without hardcoded paths. `propertyKey('scheduled')` resolves the live GCM custom-property key. The existing confirmed property-key migration also recognizes Controller's configured calendar end datetime key. A disabled writer makes `encode` and native create fail before writing; historical notes remain readable. Consumer plugins should check v2, call the codec for writes, and derive Base filters from returned definitions rather than guessing a path or key.
+
+The existing five-destination settings hub and default Rules & fields route remain unchanged. Classification controls sit on the Custom fields page without another nested disclosure. Inputs and toggles use native keyboard controls and accessible labels; existing namespaced narrow-pane settings styles stack the controls on mobile. The pre-existing custom-field editor disclosure remains the only nested editor. The default **Kind** custom field is a plain-text list, and an existing Kind field may be configured as a list; its choices continue to use the lazy Kind index. The explicit **Install task fields** action no longer adds a Priority property. Custom-property **Show only for kinds** and **Hide for kinds** match each authored YAML-list member exactly; legacy tag scopes can be cleared or retargeted in the same editor. This version does not change production content. The one-time note/template/Base migration and physical-iPhone acceptance are separate; customized Bases still require explicit review. Minimum Obsidian remains 1.10.0. The v2 public codec, configurable list storage and list editor default warrant a major version.
+
+Focused validation covers list/tag/scalar dual-read, writer-only settings changes with zero note writes, disabled writer refusal, selected mapping removal without note edits, native record creation and calendar list preservation, list round-trips with unrelated values, classification migration body preservation, and settings/contract regression suites. The full declared `npm test` suite with `TPS_NO_DEPLOY=1` passed 1,490 checks; a separate final build includes TypeScript validation and deploys only to the test vault. Installed settings UI verification and release artifacts are recorded in [7.0.0 release notes](release-notes/7.0.0.md).
+
+## 6.0.1 — Smoother desktop typing and title display
+
+On desktop, title display now refreshes at initial layout readiness and from file-open, active-leaf, layout, metadata and Markdown render events. The former 900 ms sweep over every open Markdown pane and rendered link no longer runs while editing. Body-only metadata events with an unchanged cached title skip title DOM work. When a cached note title actually changes, open rendered links that GCM previously retitled update from that metadata event; aliases and links whose text was edited afterward remain untouched. Obsidian Mobile retains the 900 ms remount fallback until its delayed title/icon lifecycle can be validated on a physical device.
+
+The editor-change listener still records the active note's edit time for existing typing guards and timestamp ownership. It no longer calls `editor.getValue()` on every character or schedules the retired Markdown parent reconciler, whose implementation already returned without doing work. This changes no note content, saved setting, command or API. Minimum Obsidian stays **1.10.0**.
+
+Focused regressions count zero full-note reads, retired reconciliations and timers across 1,000 editor events; zero desktop recurring title sweeps; targeted title refresh on desktop layout readiness/open/leaf/layout even with inline menus disabled; unchanged metadata with zero inline-title DOM lookups or rendered-link scans; and one rendered-link update for an actual target-title change. The full declared suite, Test-vault deployment/reload, foreground verification and exact release assets are recorded in [the 6.0.1 release notes](release-notes/6.0.1.md). Other installed plugins and Obsidian core can still contribute to input latency; physical iPhone timing remains unmeasured. Production installation remains the user's BRAT pull.
+
+## 6.0.0 — Obsidian Page Preview and native note opening
+
+**Menus & surfaces → Note opening → After creating a note** offers **Obsidian Page Preview**, **Open note**, and **Stay in current view**. Preview uses Obsidian's core `hover-link` Page Preview on desktop with a connected caller anchor; Obsidian 1.7 and later let you click inside that preview to edit the note. Open uses the native Markdown editor in Editing mode, even when the destination leaf was in Reading mode. Stay leaves the current view alone. A Preview request without a connected anchor, or on mobile, falls back to Open; **Open destination** chooses current or new tab for Open and that fallback. Saved `preview` remains `preview`, including Calendar's one-time preference import, and the default remains Preview. Creation still awaits initial template and task preparation before presentation. An open failure reports a Notice while acknowledging the created file so callers do not create it again.
+
+The custom editable hover card, its body writer, mobile overlay styling, and the third-party Hover Editor popover route are removed from the shipped bundle. **Force previews for Base links** remains available: on supported Calendar, Kanban, TPS List, and TPS Table note links, the first plain click requests core Page Preview and a second click opens the note. With the setting off, clicks follow normal Obsidian navigation. The separate **Linked context activation → Show hover preview** also uses the core Page Preview event. No GCM-created preview editor or third-party popover is used. Core Page Preview must be enabled for Preview to appear; Obsidian's public `hover-link` event does not report whether a popover opened, so GCM cannot automatically fall back when that core plugin is disabled.
+
+The public `ui` capability advances to **v2**. `presentCreatedNote({ filePath, sourcePluginId, anchorEl?, event?, sourceLeaf?, renameTitle?, explicitDestination? })` remains the shared post-create handoff; consumers can pass the real invoking mouse event and connected anchor for Preview. `getNoteOpeningSettings` reports `preview`, `open`, or `stay`, and `shouldForceBaseLinkPreview()` reports the saved setting. The legacy `openEditableNotePreview` API remains as a validated compatibility shim but requests core Page Preview, with native Open as its unavailable/mobile fallback. It never constructs a card or programmatically focuses a preview editor. Consumers should use `presentCreatedNote` for creation and gate on UI v2. The removed custom editor contract warrants a major version. Saved keys and note content are preserved; minimum Obsidian remains **1.10.0**. Physical-iPhone acceptance remains separate.
+
+Focused regression coverage checks saved Preview preservation, native created-note routing and Editing mode, the legacy API shim, Base-link core preview, and absence of the custom editor implementation/styles. Final declared tests, separate build, Test-vault reload/UI results, and asset hashes are recorded in [the 6.0.0 release notes](release-notes/6.0.0.md). Production installation remains the user's BRAT pull.
+
+## 5.0.0 — Whole-note task authoring
+
+GCM now uses Atomic note mode even if saved settings selected Atomic line. **Create task** creates one standalone Markdown task record. Its Initial status choices come from the normal Status field, independently of saved checkbox mappings. The dialog no longer offers a containing note or Daily Note parent. Existing checkbox lines stay intact and readable; GCM does not automatically migrate them, turn them into task records, or scan their bodies when an ordinary note opens. A child note uses its frontmatter parent relationship; creating it no longer inserts a checkbox-link line in the parent. Scheduled-item population no longer scans the vault on Daily Note open.
+
+The Tasks page retains standalone task creation and a warning about open Markdown checkboxes when completing a whole note. That warning offers Open note, Ignore and Cancel; it cannot complete or cancel individual checkbox lines. Checklist rows in GCM's note panel are read-only links back to their source. The task-line architecture selector, task-parent choice, linked checkbox controls/mappings, task-line hiding/reveal persistence, checklist promotion, completion prompt status options, Daily Note auto-population, TPS Base line-write fallback, Daily Note task-line moving, inline status reconciliation, item history, and `@@` inline set controls are absent. Saved architecture and line-writing toggles normalize to their inactive whole-note values on load/save. The five-destination settings hub, default Rules & fields route, note-record root/layout, transient disclosure state, accessibility, and narrow-screen navigation remain as before.
+
+The public `tasks` API is **v4**: read-only parsing/list/get/find/focus remain for historical lines, while create/update/status/checkbox/completion/field/move/delete reject before line reads or writes. `taskLines` and `itemProperties` advance to **v2** with `supportsTaskLineMutation: false`; `taskRecords` advances to **v2** with `supportsPromotion: false`. Checklist-to-note and task-line-to-note promotion also reject before reading the source line. Clients should use `nativeRecords` to create or edit a whole-note task. This is a breaking API/settings release: Controller and Calendar Base must handle the new capability, and Notebook Navigator must suppress its legacy line actions when the capability is false.
+
+GCM closes the native-mode line routes in context menus, commands, editor suggestions, TPS List/Table, AI-assisted creation, Daily Inbox, recurrence, timer metadata, inline property editing, linked child-checkbox sync, child body-link insertion/removal, and explicit unresolved-link cleanup. A shared Markdown-body mutation boundary rejects any remaining GCM-owned line write. Ordinary Obsidian editing of Markdown text and GCM note-level property, relationship, attachment, and time-tracking actions remain available. Historical inline content, session data, and saved mapping keys are left unchanged. Minimum Obsidian stays **1.10.0**; physical-iPhone behavior remains unverified.
+
+Focused tests cover zero-read/zero-write native guards, standalone creation, shared body writes, linked checkbox sync, checklist completion, TPS List/Table, entity queries, and Daily Note population. The declared `npm test` suite passed 1,475 tests with zero failures; the separate build deployed 5.0.0 to the Test vault. Hot Reload applied the new Workflows settings, where Daily notes and Tasks exposed no line-authoring controls. The Test-vault `Create task` command created a standalone task note with task frontmatter and no checkbox/body line; its QA record was archived directly. Deployment preserved runtime `data.json`, and the plugin reload saved the intended whole-note setting normalization. Details and tested artifact hashes are in [the 5.0.0 release notes](release-notes/5.0.0.md). Production installation is the user's BRAT pull.
+
+## 4.1.3 — Index whole-note parent/child navigation
+
+The top and bottom Children controls and context-menu child lookup now ask one transient reverse relationship index for whole-note children. Previously, opening an empty parent note could enumerate the loaded vault and inspect every candidate's metadata; the installed Test-vault sample at 4.0.11 needed 35,191 metadata lookups for that child lookup. The index is seeded once from loaded files and current frontmatter outside navigation, then kept current from the existing metadata, create, rename, delete, companion, Canvas, and confirmed migration events. Index readiness force-refreshes an already-mounted menu once; a cold menu mounts once. If a provisional seed precedes final metadata resolution, only files with missing cache entries or stored parent values are revisited when link targets settle. The index is a read-only projection of the configured parent property, not a second writer, repair layer, persisted cache, watcher, or per-open fallback scan. Parent-key or architecture changes rebuild it from current sources; ignore rules are checked when results are displayed.
+
+In native whole-note mode, the top Children button now counts stored child-note relationships without scanning the current note's body for line links. Legacy mode retains body-only child links. In the context menu, each child counts once; its open row shows the child title, and its removal row now says **Unlink** followed by that title so the actions are distinct. The separate **Render child-note links as checkboxes** presentation remains independently configurable and may inspect the selected body when enabled. Explicit relationship pickers and the full relationship panel can still enumerate candidate files when invoked. The legacy companion catalog may read Markdown during its startup setup; that existing catalog is outside the native-mode seed. No note content, settings schema, writer, public API, or minimum Obsidian version (1.10.0) changes.
+
+The 10,003-file synthetic seed made one loaded-file inventory and 10,003 direct metadata lookups in 15.7 ms on the desktop test harness. Fifty repeated empty-parent render calls through the real persistent-navigation methods then made zero vault inventories, metadata lookups, body reads, or writes. Focused tests also cover single-pass cold and mounted menu refreshes, provisional link-target settlement, late plugin load, mobile-style repeated opens, same-path file replacement, event bursts, bare paths, folder/target rename, non-Markdown companions and Canvas JSON, architecture/ignore changes, migration events, seed failure, and unload during an async legacy catalog build. These are operation counts and harness timings, not installed test-vault or physical-iPhone latency. Final declared tests, build/deployment, installed verification, and artifact hashes are recorded in [4.1.3 release notes](release-notes/4.1.3.md).
+
+## 4.1.2 — Inspect unresolved child links on request
+
+Opening a note no longer schedules an eight-hundred-millisecond unresolved child-link inspection. That inspection read the selected body and could offer to remove link lines during ordinary navigation. Use **Child links: Check unresolved links in current note** from the command palette when you want the existing inspection and confirmation flow. The command is available only for an active Markdown note and reads that note when invoked. It does not run automatically in either native whole-note or legacy line mode.
+
+The independent **Render child-note links as checkboxes** setting still controls whole-note child-link presentation. When it is off, file-open and related events do not schedule its linked-row rendering, and turning it off clears rows already mounted in Reading and Live Preview. When it is on, child-note checkboxes continue to render in both architecture modes. No note content, settings schema, writer, public API, or minimum Obsidian version (1.10.0) changes. Whole-note parent/child navigation still looks across the vault for relationship candidates; that separate discovery cost remains.
+
+Focused tests cover file-open operation counts across both architecture modes and checkbox setting values, mobile event scheduling, command availability/invocation, and mounted-row cleanup after toggling the setting off. The full declared suite, installed Test-vault check, and artifact hashes are recorded in [4.1.2 release notes](release-notes/4.1.2.md). Physical iPhone performance remains to be measured.
+
+## 4.1.1 — Build the entity index only when requested
+
+The entity index no longer enumerates every Markdown note when Obsidian first reports that metadata is resolved and no caller has used the index. A first note-entity query builds from the current metadata; a line-entity picker still builds its content-backed index on demand. If a query ran before initial metadata resolution, the first `resolved` event still rebuilds its note records and restarts any active line index so incomplete startup frontmatter cannot persist. Later broad `resolved` events leave a healthy index alone. This changes no setting, record format, writer, public API or minimum Obsidian version (1.10.0).
+
+The installed 4.1.0 Test-vault baseline used a new isolated instance of the released entity-index class with its real dimension definitions and a capture-only event host. Each simulated idle first-resolution enumerated **11,952** Markdown files and made **11,951** metadata lookups, with **zero** body reads. Three direct synchronous samples took **219.7, 159.5 and 162.7 ms**. The document was visible but DevTools held focus, so these are operation timings, not startup or input-to-paint measurements. In the corrected source, focused regressions assert zero enumerations/lookups/reads for idle resolution and one current-metadata build at first query; early note and line queries still receive an authoritative first-resolution rebuild. All **1,447** declared checks passed, including TypeScript and a build with runtime deployment suppressed. A separate normal build deployed 4.1.1 to the Test vault, and a named reload confirmed the live plugin object reports 4.1.1 with its runtime settings file unchanged. Installed after-operation timing and full startup latency remain unmeasured; [4.1.1 release notes](release-notes/4.1.1.md) list the tested artifacts and limits.
+
+## 4.1.0 — Choose tag or property record classifications
+
+**Rules & fields → Custom fields → Record classifications** now lets each existing mapped record type use either a complete tag or a parent `kind` plus subkind property/value. The tag path and property pair are editable values, with no Finance-specific type path in the writer. **Apply** previews affected notes and generated Finance Bases, then converts their exact frontmatter classifications through GCM's existing confirmed migration and recovery flow. Note bodies, stable IDs, unrelated tags, and customized Bases are preserved. A conflict, changed note, changed Finance settings, active calendar sync, or active workout stops the batch before the new mapping is saved. Property classification encoding rejects a field collision instead of overwriting that field. Nothing runs on startup or ordinary note opening.
+
+GCM's `frontmatterKinds` API remains the single classification source for record creation, inspection, and the Finance dashboard. TPS Finances 1.15.0 supplies a preview for unchanged generated Bases so their filters move with the mapping in the same reviewed operation. When Finances is enabled, GCM blocks Finance kind conversion until that preview API is available. Install that Finance version before applying a Finance kind conversion. User-authored Bases, arbitrary custom rules, and disabled consumers are not rewritten; review those manually. Legacy string-only record-key mappings are not included in the selector. Malformed or aliased matching frontmatter must be resolved before conversion. The settings hub, custom-property visibility controls, and stored settings schema are unchanged; route and mode drafts stay transient. The selector stacks with Obsidian's normal Settings layout on narrow screens. Minimum Obsidian remains 1.10.0. Validation, test-vault reload, and artifact hashes are in [4.1.0 release notes](release-notes/4.1.0.md). Physical iPhone acceptance and production BRAT installation remain separate.
+
+## 4.0.11 — Avoid duplicate child-navigation metadata checks
+
+The persistent parent navigation's child list and reverse relationship lookup enumerate logical candidates once, then use the existing `hasParent` check to apply child and parent ignore rules. They no longer repeat the same ignore check while enumerating candidates. Visible Children buttons, counts, related paths, companion handling and ignored relationships retain their existing behavior. This reduces metadata inspections during a full-vault child lookup without adding a cache, watcher, writer or changed setting. Child discovery still enumerates the vault on a cold navigation refresh.
+
+A focused regression executes both persistent-menu methods with the real parent-resolution service, compares their results with the prior candidate filter, and counts metadata inspections across 120 unrelated notes, visible and ignored children, and an ignored parent. All 1,439 checks in the declared `npm test` workflow passed. With GCM 4.0.11 loaded in the Test vault, the same child lookup on a no-child note fell from 70,372 to 35,191 metadata calls. Its instrumented synchronous time fell from 161.9 to 136.2 ms; both direct-method samples had DevTools focused, so they do not measure foreground interaction latency. A linked synthetic child appeared as `1 Child` in the note UI, and the QA note body/title remained intact. Both synthetic notes were archived directly; GCM `data.json` stayed byte-identical across deployment and QA. Physical-iPhone and full note-opening latency remain unmeasured. Minimum Obsidian remains 1.10.0. See [4.0.11 release notes](release-notes/4.0.11.md).
+
+## 4.0.10 — Keep unrelated imports out of Daily Note candidate scans
+
+The `dailyNotes.findForIsoDate` legacy lookup keeps one candidate index across dates. Previously, every Markdown create/modify and matching metadata callback marked that whole index dirty. A calendar lookup after each ordinary transaction edit then enumerated and classified every Markdown file again. The index now records the paths that supplied a Daily Note identity or conflicting date. A changed path is checked against its current source; a transaction that was and remains unrelated leaves the warm index intact. A path entering or leaving Daily Note identity, including a conflicting identity, still causes a rebuild. Rename/delete use the old path's membership, and configuration changes still select or invalidate the appropriate index.
+
+The existing pending-current-source guard continues to block legacy identity reads until the changed file is inspected. Reconciliation still checks current bytes before a rename or creation. Obsidian can emit a global metadata `resolved` after each ordinary edit; once initial metadata has resolved, those repeat events keep the warm index because their changed paths have already been handled. The first `resolved` after startup or an observed full metadata rebuild still invalidates it. The public Daily Notes API, settings, saved notes and minimum Obsidian 1.10.0 are unchanged; this adds membership data only to the existing in-memory index, with no writer, repair pass or background watcher. A cold lookup, a real Daily Note identity change, a configuration change and a full metadata rebuild can still enumerate the vault.
+
+Regression tests exercise the actual naming-service event route: 20 transaction creates and 20 modifies, each followed by `changed`, `resolve` and `resolved`, leave the warmed index at one total Markdown enumeration, with one current-source read per edit and bounded date parsing. A simulated full metadata rebuild performs one new enumeration after its first `resolved`. Focused tests also cover metadata-only and current-byte transitions, conflicting dates, rename/delete, configuration changes and pending readiness. The 67 Daily Note creation, 41 identity-reconciliation, 620 pretest, 814 main-stage and 206 supplemental checks pass, as does TypeScript. The versioned test-vault build was reloaded with the consumer suite enabled. In an installed test-vault replay, a cold lookup scanned once in 193 ms; each of three unrelated transaction edits was followed by a Daily Note lookup with zero full scans and 0–0.5 ms lookup time. Before the fix, the same foreground operation performed one full scan and took 150–159 ms after each edit. The synthetic note retained exactly the expected content. This does not establish a physical-iPhone or production latency measurement. Release details are in [4.0.10 release notes](release-notes/4.0.10.md).
+
+## 4.0.9 — Fit custom property editors to the settings pane
+
+Custom field editors now choose their column count from the available pane width. Narrow panes use one column; wide panes can retain two. Text controls wrap inside their row, textareas stay inside the card, and actions keep usable touch targets. The fixed two-column grid previously expanded beyond its parent: the 675px settings pane scrolled to 692px, and a 317px narrow editor grid grew to 360px. This is a layout correction, with no additional runtime work, observer, cache, timer, schema, settings default or writer.
+
+The five-destination hub and default Rules & fields route remain unchanged. Custom fields keep their existing single open disclosure, demand-rendered editors, drafts and save/migration actions. All new selectors use the owning `tps-gcm-settings-*` namespace; route/disclosure/focus state remains transient. Minimum Obsidian remains 1.10.0. Validation and test-vault reload are recorded in [4.0.9 release notes](release-notes/4.0.9.md); physical iPhone acceptance remains separate.
+
+Validation: 25 focused property/demand/visibility checks and all 1,435 declared tests pass with zero failures, skips or cancellations; TypeScript and the separate production build pass. Named reload confirms 4.0.9 in Obsidian Plugin Test Vault. Installed Priority and Tags editors fit at 321 CSS px pane width with no card/control overflow and approximately 44px inputs/actions (fractional browser zoom rounding). The 675px pane no longer extends to 692px; at 933px the grid uses two columns without overflow. Native desktop zoom supplied the narrow/wide CSS viewports; this is not physical iPhone validation. The 26 Priority setting labels, all five actions and all 57 definitions are preserved. An unapplied key draft survives collapse/reopen and was restored without Apply. Eight plugin settings files are byte-identical; normal zoom, the prior note and transient settings routes are restored, and diagnostics removed. No note/provider actions or new background work.
+
+## 4.0.8 — Build custom field editors when opened
+
+Opening **Rules & fields → Custom fields** now builds the property summaries and finder immediately. Each existing disclosure builds its editor only when opened; a restored open card is ready on render. Collapsing/reopening retains its mounted controls and unapplied drafts. Opening another card keeps the existing single-open-editor behavior. Filters, order, settings keys, defaults, migrations, buttons and save ownership remain unchanged. The Accepted kinds hint no longer initializes the entity index merely to list known kinds. Manual-only and entity-only value previews no longer discover unused vault choices; configured vault previews still use the existing discovery path, ordering and cache policy. No new cache, watcher, timer, persisted state or repair logic is added.
+
+The installed 4.0.7 page built all 57 editors while collapsed and made 15 full Markdown inventories plus 169,815 metadata lookups. Two trusted foreground route actions took 910/879 ms to reach the rendered page, with 856/823 ms inside `renderProperties`. This is a settings-specific desktop diagnosis, not a native baseline or an iPhone/whole-vault speed claim. Four new regressions fail on the old implementation; coverage includes repeated closed renders, restored/opened cards, draft retention, unused option discovery and unchanged vault preview behavior. The test harness executes the source methods with mocked DOM/settings controls and real option helpers; installed UI validation covers the host boundary.
+
+Final versioned validation: 79 focused and 1,435 full declared tests pass with no failures/skips, plus TypeScript and the separate production build. Named GCM reload confirms 4.0.8 in Obsidian Plugin Test Vault. Two final trusted foreground Custom fields opens reach the rendered page in 47/25 ms with zero vault inventories, metadata inspections, raw reads or write attempts, versus 910/879 ms and 15 inventories/169,815 inspections before. The page has 390 DOM elements instead of 12,274. First Priority and Tags expansions take 26/35 ms, perform no scans, and mount only the selected editor; an unapplied key draft survives collapse/reopen. Enter collapses the focused card, returning to the page keeps closed cards unbuilt, and all eight monitored settings/artifact sets remain unchanged during QA. Temporary hooks and drafts are removed and the prior view restored. These are small warm desktop samples, not a native comparison or physical iPhone acceptance. Existing expanded-card horizontal overflow was observed and is not addressed by this runtime-only patch.
+
+This is a backward-compatible patch; minimum Obsidian remains 1.10.0. The existing five-destination hub, default Rules & fields page, single disclosure, stylesheet and transient-state contract are unchanged. Narrow mobile layout verification remains separate. Test-vault validation and BRAT artifact hashes are recorded in [4.0.8 release notes](release-notes/4.0.8.md).
+
+## 4.0.7 — Preserve pending editor changes during property edits
+
+Property actions on an open source note now use its current editor buffer and Obsidian’s incremental `MarkdownView.setViewData(source, false)` setter. The unchanged current body is retained; native range diffing preserves the selection/history and synchronizes the core Properties editor. Obsidian owns the body, selection, undo and persistence. The previous disk writer conflicted with a pending editor save: an installed CRLF title edit reverted its title and misplaced body text. Preserving output line endings alone did not fix that originating conflict. Closed-file and source-preserving automation writers retain their existing routes.
+
+A changed header, closed target, switched file or changed source mode during an asynchronous action is rejected before editing; intervening body typing is retained. Unchanged property actions preserve authored YAML order, comments and quoting rather than rewriting the header. Open-note unchanged bursts perform no raw reads, saves, notifications or filename changes. Actual property edits retain existing serialization and normalization. A real title-dialog test showed that a custom range-edit origin is rejected by Live Preview’s hidden-frontmatter filter when the selection is in the header. A programmatic `set` range succeeds but leaves the native Properties model stale. Reusing the public MarkdownView setter supplies both behaviors, replacing the draft’s manual range-diff code; it does not replace/reset the editor state (`clear` is false). A before-failing regression models the filter boundary, and the host fixture asserts native Properties synchronization.
+
+The public `TextFileView.save()` can resolve early when a prior save is in flight. Two operation-local target-file listeners acknowledge persisted content before the existing filename and event owners run. An old save with the same header and an outdated body cannot confirm the edit. Listeners and a 30-second failure deadline are removed on exit. No polling, retry, fallback writer, repair, permanent watcher, cache or private host-state mutation is added. Save failures retain authored editor content and do not rename or announce success. Bulk actions report one failure notice using the existing count; committed-title rename errors propagate while automatic filename maintenance keeps its existing handled-error policy. A property already saved before a filename failure still emits its actual-path event.
+
+Regression coverage includes real CodeMirror selection/history with mocked host storage and save scheduling. Installed Obsidian 1.14.2 checks with all seven relevant TPS consumers enabled preserve short/long LF and CRLF notes, two simultaneous source editors, body input during an async action and an in-flight save. Both source editors receive native shared-buffer changes immediately; no secondary synchronization system is introduced. Switching, closing, Reading mode and conflicting frontmatter reject pending actions. An installed no-op test exposed formatting-only rewrites after undo; two before-failing regressions cover that correction. API checks and deliberately held fixture I/O are disclosed separately from real UI input; they do not establish cold startup, physical iPhone or overall native-performance parity.
+
+Final validation passes 1,430 declared and 209 supplemental checks, with no failures/skips, plus TypeScript and the separate normal Test build. Named GCM reload loads the tested 4.0.7 artifact. Installed final checks pass three dirty Live Preview notes (short/long LF and CRLF), four mixed Live Preview/Source multi-view cases, and eight lifecycle cases, including selection/undo, Reading-only edits, changed-target rejection and a deliberately held first native save. Each simple dirty title action writes once; 20 unchanged open-note edits make zero raw reads, writes or native saves. Real foreground title-dialog gestures select the whole title and save title/filename/body consistently on first and repeated edits; native Properties stays synchronized. A fixture-only injected core filename error produces a visible failure notice and retains the saved property/body. Seven settings files are unchanged; fixtures are archived with byte checks and instrumentation removed.
+
+The two successful foreground dialog callbacks complete in 81.5/79.3 ms; these are small warm desktop method samples, not click-to-paint distributions, a cold-process measurement, production speed or the overall 80% native-performance target. API lifecycle runs include unfocused/hidden windows and disclose the held fixture I/O. No real filesystem failure, minimum-version runtime or physical iPhone acceptance is claimed. No settings, schema, API or compatibility change; minimum Obsidian stays 1.10.0. This is a backward-compatible patch. See [4.0.7 release notes](release-notes/4.0.7.md) for the tested artifact hashes and BRAT handoff.
+
+## 4.0.6 — Reject unchanged deletion cleanup before entering writers
+
+Deleted-file relationship cleanup now checks existing logical frontmatter for a possible matching parent/attachment before entering its writer. Ambiguous or unrelated links do not enter the file queue. Markdown inspection uses one cached source for exclusions and body preflight, rereading through the cache only when its own frontmatter mutation changed that source. Actual frontmatter/body mutations still use their existing atomic writers and current contents, with path and tag exclusions rechecked at those boundaries. No recovery, new cache, watcher, timer, setting, schema or API is added.
+
+Discovery still visits every existing logical relationship candidate and inspects Markdown bodies. The parser supports a legacy malformed-checkbox link that core link metadata does not index; dropping this scan based only on core links would silently change cleanup behavior. This patch preserves that scope rather than adding another relationship index. Eight new regressions cover unchanged large-vault/burst work counts, current edits, exclusion changes, ambiguity, path exclusions and the unindexed legacy link form. Minimum Obsidian remains 1.10.0. Final validation, limits and artifact hashes are recorded in [4.0.6 release notes](release-notes/4.0.6.md). Production remains the user’s BRAT pull.
+
+Final verification passes 73 focused, 1,406 declared and 209 supplemental checks, zero failures/skips, TypeScript, separate normal Test deployment and named reload with unchanged settings. Two installed unreferenced deletions reduce frontmatter writer attempts from six to zero and raw reads from 142 to 136; the existing 11,216-note body discovery remains. A separate real deletion removes three references from two fixture notes, including a legacy link confirmed absent from core metadata, while preserving the other parent, alias, marker, surrounding body and unrelated attachment/note bytes. Seven settings files stay unchanged, fixtures are archived/trashed, and hooks are removed. Before samples were visible/unfocused and after samples hidden/unfocused; timings do not establish improved latency or native parity. The current automatic scan remains a substantial behavior cost. Unit hosts are mocked; actual gestures, cold startup and physical iPhone remain unverified. No production deployment is implied.
+
+## 4.0.5 — Keep the inactive companion index out of native-record events
+
+Native-record mode now applies its existing startup ownership rule to automatic file lifecycle events. Folder/attachment moves and deletions no longer initialize the unused legacy attachment-property index; ordinary Markdown renames no longer enter its pending-target queue. Direct companion changes and legacy Canvas invalidation also stay inactive in this mode. Recognized companion files remain excluded from ordinary note automation, while configured title synchronization, title refresh, link cleanup and native record consumers retain their existing routes. Legacy mode keeps the same lifecycle service and its current-source, identity/conflict and retained-history behavior. The mode is read at each event; no setting, migration, cache, watcher, timer, retry or public API is added.
+
+Five new tests exercise the actual registered callbacks, including 20-event bursts, companion exclusions, ordinary title/delete behavior, legacy dispatch and mode changes after registration; four fail before correction. Separate real-service tests cover legacy writes and concurrent/conflict paths with mocked host storage. Minimum Obsidian remains 1.10.0. Final test-vault validation and release hashes are recorded in [4.0.5 release notes](release-notes/4.0.5.md). Production installation remains the user’s BRAT pull.
+
+Final validation passed 77 focused, 1,398 declared and 209 supplemental checks with zero failures/skips, TypeScript, a separate normal Test build/deploy and a named reload. In the same installed nested-folder fixture after reload, raw vault reads fell from 11,224 to 8; legacy handler dispatches, index startup and queue entries fell to zero. The first baseline legacy handlers completed after 3.4–3.5 seconds including discovery/queue wait; the corrected mode never started them. Repeated folder moves, attachment renames and Markdown renames preserved all 17 fixture files and seven settings files; all consumers stayed enabled. Installed file-manager deletion of a synthetic attachment and empty folder also leaves the legacy index dormant, without legacy handler/queue calls. Other consumers still perform work during deletion. Core API return time did not improve consistently (first folder move 114 ms before, 134 ms after). Samples were visible/unfocused, so these counts prove removal of inactive work, not foreground latency or overall native-performance parity. Actual gestures, cold-process startup and physical iPhone remain unverified.
+
+## 4.0.4 — One attachment-property discovery pass per folder operation
+
+Folder moves and deletions now collect affected attachment-property companions during the existing identity-index rebuild. Previously each operation enumerated Markdown files and inspected companions twice before it could determine that no record needed changing. Discovery still completes across all companions before any mutation, so duplicate identities outside the moved folder continue to block writes. Current-source merge guards, malformed-record reporting, folder identity tracking, retained history and source-file byte preservation remain in their existing owners. No cache, listener, timer, retry, setting or API is added.
+
+Five operation-count regressions failed before the change. They cover a 1,000-note unrelated vault, 20 unchanged folder requests, global duplicate IDs, removal of stale identity evidence, concurrent user edits at the writer and malformed managed records. Minimum Obsidian remains 1.10.0. See [4.0.4 release notes](release-notes/4.0.4.md) for final validation and artifacts; production installation remains the user's BRAT pull.
+
+
+Final validation passed 52 focused, 1,393 declared and 209 supplemental checks (zero failures/skips), TypeScript, a separate normal Test build/deploy and named reload with unchanged data.json. Installed nested-folder moves now perform two GCM discovery scans instead of four; Navigator still performs its own shared tree scan. Repeated folder moves with eight tagged notes, two text attachments, one image and six referring notes preserved source/image bytes, non-link text, all twelve links and current tag membership. Seven settings files were preserved; synthetic fixtures were archived and diagnostic hooks removed. Tests exercise real service code with mocked host storage; installed coverage used the current native-records configuration without matching legacy companion records. Active-companion mutation, duplicate/conflict and concurrent-edit behavior is covered offline. Samples ran visible but unfocused, so no UI/native-speed claim is made. First-use authoritative companion discovery after reload still scans the vault and queued folder work for about 4.4 seconds in a separate diagnostic; this patch does not solve that startup/first-use scope. No production installation or physical iPhone acceptance is implied.
+
+## 4.0.3 — Faster folder choices
+
+Folder-move controls now identify non-leaf folders by walking each path's ancestors, replacing an all-pairs descendant comparison. Empty leaf folders and folders containing direct files remain selectable; intermediate empty folders remain omitted. Labels still use the nearest included ancestor, and locale ordering, root exclusion, current-folder checks and move callback targets are unchanged. The folder list is rebuilt from the current vault inventory on every request, so moves and new folders are immediately represented. The set used for ancestor membership exists only during that call; no persisted cache, watcher, timer, setting or background work is added.
+
+Eight focused regressions cover folder/label equivalence, sparse and trailing paths, prefix siblings, Unicode, root/duplicate cases, 1,500 sibling folders, a 25-request unchanged burst, changed inventory and the actual menu callback. Two operation-count tests fail before the fix. Minimum Obsidian remains 1.10.0. Installed measurements, full verification and artifact hashes are recorded in [4.0.3 release notes](release-notes/4.0.3.md). This fixes folder-choice computation; file moves, archive policy and their writers are unchanged. Production installation remains the user's BRAT pull.
+
+
+Final validation: 1,388 declared checks and 209 supplemental checks pass with zero failures/skips, followed by a separate normal build/deployment and named test-vault reload with unchanged settings. Installed calls return the same 2,669 folder choices, labels and ordering (identical serialized SHA-256). Separately counted prefix comparisons fell from 7,253,920 per call to zero; one current inventory read remains. Uninstrumented synchronous computation measured 181–255 ms before and 15–19 ms after (medians 197/17 ms; seven calls each). The baseline window was focused; the after window was visible but unfocused. These are warm installed-method measurements, not actual menu-paint/input latency, cold startup, physical iPhone, production speed or native-performance parity. An unrelated test overlay prevented actual picker gestures. All seven recorded plugin settings files were preserved; temporary instrumentation was restored and no notes were modified.
+
+## 4.0.2 — One checklist decision for task completion
+
+Completing a note now runs the configured checklist check once in the shared property writer. The status wrapper previously ran the same handler before calling that writer, so Ignore could prompt twice and even notes with no open items were scanned twice. Removed the redundant call without changing the checklist actions or their settings. The existing external-status guard now records an accepted decision when it finishes, so time spent answering the prompt does not consume its four-second recognition window. Direct mapped-status property edits retain the check; parent checks still run first; cancellation, write guards, multi-file no-prompt behavior and current-source writes remain intact. No new state, listener, cache, timer, retry or recovery logic. Minimum Obsidian remains 1.10.0.
+
+Thirteen composed regressions use the real status, checklist and frontmatter implementations with host storage and modal-choice boundaries mocked. Six fail before their corresponding corrections; 87 focused checks pass afterward. A simulated ten-second prompt verifies the existing external-status recognition and its unchanged expiration. They cover Ignore, Cancel, Open, complete/cancel items, mapped status keys, changed guards/concurrent edits during the prompt, parent cancellation, unchanged bursts and disabled/multi-file behavior. Installed 4.0.1 baseline calls confirmed two checklist handlers/scans per completion on both a plain note and an already-checked checklist. Final validation passed 1,380 declared and 209 supplemental checks with zero failures/skips, TypeScript, a separate normal build/deployment and named test-vault reload with unchanged data.json. Installed API completions on a plain note and an already-checked checklist now call the handler/scan once rather than twice; target raw reads fell from 5/4 to 4/3. Each still performs one source modification and one notification, with body bytes intact. Cached-read counts varied (3/2 before, 4/5 after), so this is evidence of reduced duplicate checks, not a total-latency claim. Four synthetic fixtures were archived and seven settings files preserved; no UI gesture, actual modal-choice timing, physical iPhone or native-performance parity is claimed. See [4.0.2 release notes](release-notes/4.0.2.md).
+
+## 4.0.1 — One property notification owner, complete display refresh
+
+Context-property actions now leave change notifications to the existing writers instead of announcing the entire selection again and forcing another refresh. Successful property/rule writes still announce independently; failed and unchanged targets no longer receive the redundant success broadcast. Existing attachment refresh ownership and explicit configured rules are preserved.
+
+The shared display refresh now includes mounted title property panels even when the inline menu is disabled. Previously those panels were tracked separately but omitted from both immediate and deferred refresh loops, leaving saved property values stale onscreen. The existing typing protection and deferred refresh include the same views; views present in both collections refresh once. No new listener, cache, timer, retry, recovery logic, persisted setting or API is introduced. Minimum Obsidian remains 1.10.0.
+
+Eight focused regressions cover notification ownership, partial failures, unchanged bursts, rule/attachment writes, property-only displays, duplicate view membership, typing protection and changed-file safety. Six fail before their corresponding corrections. All 73 focused checks pass. Installed callback checks verify one notification per changed note and none for a no-op. A separate installed rendered-DOM check reproduced the stale panel with saved priority high but displayed low; the old explicit forced refresh also failed, confirming the existing refresh owner's incomplete view enumeration. Final validation passed 1,367 declared and 209 supplemental checks, with zero failures/skips, TypeScript and a separate normal build/deployment to the test vault. Named reload preserved data.json. Installed API-driven edits with all consumers enabled updated the property-only Reading panel for single and three-note writes; an unchanged repeat emitted no notification. Six synthetic note bodies and seven settings files were preserved, fixtures archived, and diagnostic hooks removed. The check observes rendered DOM/AX correctness; it does not measure pointer latency or physical iPhone/native parity. The narrow test layout prevented a useful full-panel screenshot, so visual layout and actual context-menu gesture acceptance are not claimed. No production installation is implied. Details and measurement limits are recorded in [4.0.1 release notes](release-notes/4.0.1.md).
+
+## 4.0.0 — Selected-file edits stay local
+
+Native `resolve`, `update`, `rename` and `archive` treat a `TFile`, existing file-path string or `{path, id?}` as a selected file. They read that file's current source and reject known identity conflicts, mismatched expected IDs, detached file objects and moved/replaced targets. A missing explicit object path never falls back to another ID owner. Source-preserving updates recheck identity and target at the atomic writer; filename changes recheck after folder preparation. Ordinary title editing uses a separate writer and retains 3.6.16's display fix.
+
+**Authority contract change:** a selected-file handle no longer proves that no unseen duplicate exists elsewhere in the vault. This is a major release for callers relying on that prior guarantee. ID-only references, explicit-ID creation, snapshots/listing, reidentification and migration/reconciliation plans still verify the full namespace. Plans retain global checks even when their source is expressed as a path. Known conflicts remain blocked; no records are merged, repaired or deduplicated. NativeRecords API v6 method shapes remain compatible, with `capabilities.selectedFileAuthority: true` advertising the new semantics. Callers needing global ownership must use an ID reference or the existing snapshot/identity-plan APIs, not a selected-file reference.
+
+Health's local activity/food/workout edits and Calendar's direct event edits already supply selected files. Controller calendar reconciliation uses snapshots and guarded identity plans. No consumer code, persisted settings, note schema, minimum Obsidian (1.10.0), cache, watcher, timer or retry is added. Caller-owned automatic-write exclusions remain at their existing boundary; this change does not broaden the generic storage API into another policy owner. Validation passed 131 native-record checks, 1,359 declared-suite checks and 209 supplemental checks, with zero failures/skips, TypeScript and the separate normal Test build. Named reload verified 4.0.0 with unchanged data.json. In a foreground installed Health dashboard, the first activity save fell from 3,652 ms and 11,131 identity reads to 12 ms and two selected-file reads; repeats were 3 ms before and 8 ms after. One target write preserved body/ID; all consumers remained enabled. A separate installed duplicate-ID lookup still read 11,135 sources and rejected lookup, reidentification and a known-conflict edit. Seven settings hashes were unchanged, probes removed and fixtures archived. These are small warm-process desktop samples, not physical iPhone, native-baseline or overall 80% goal acceptance. Full semantics, evidence and limits are in [4.0.0 release notes](release-notes/4.0.0.md).
+
+## 3.6.16 — Refresh titles at filename commit
+
+The existing Markdown rename listener now refreshes the matching open title in a microtask after core commits the filename. This lets every synchronous view listener finish before GCM restores the authored title, regardless of listener registration order. The previous completion callback waited for all incoming link rewrites, so a sanitized filename could replace the authored title for hundreds of milliseconds even after the title itself was saved. The existing metadata renderer supplies the current title and retains its source-mode/focus/no-op guards. Folder-only moves do not request a title refresh; companion handling and controller-only filename-to-title writes retain their existing authority.
+
+The refresh moves between existing owners; no new watcher, timer, cache, retry or repair is added. Link updates still finish through Obsidian before a save reports completion. No settings, schema, API or minimum-version change. Minimum Obsidian stays 1.10.0. Three regression cases cover immediate User/controller display and 100 folder-only moves without source reads, writes or redundant renders; the composed title test holds incoming-link completion pending. Final validation passed 86 focused, 1,359 declared-suite and 197 supplemental checks with zero failures/skips, TypeScript and the separate normal Test build. Named reload preserved data.json. Installed foreground title saves with 100 incoming references kept the authored title correct at 57–60 ms in two uniquely named controls; before the change, sanitized filenames replaced authored titles until 251/607 ms in two cases. All 100 links and note bodies survived. This fixes display ownership; core link rewriting still took 740–744 ms in the final controls. Seven settings files and the prior leaf were restored, diagnostic hooks removed and fixtures archived. Minimum-version/mobile/native-performance and measurement limits are in [3.6.16 release notes](release-notes/3.6.16.md).
+
+## 3.6.15 — One Daily Note navigation authority
+
+The date strip now resolves existing notes and creation paths through the same Daily Notes API used by Navigator. A filename match elsewhere in the vault no longer substitutes an unrelated or archived non-Daily note. Recognized legacy Daily Notes still open in their current location without reconciliation or a write. Existing canonical notes retain the API's read-only observation behavior while other metadata is pending. If identity is not ready and no note can be observed, navigation reports that condition without starting creation.
+
+Date-strip visibility uses the shared file classifier, including configured kind/tag mappings and non-Daily exclusions; scheduled-note date parsing retains its existing behavior. Configuration comes from the existing naming-service snapshot, removing the strip's independent Periodic-first precedence. Confirmed creation passes the displayed expected path to the existing creator so a folder/format change cannot silently redirect it. Cancellation, source-leaf selection, open options and template ownership remain unchanged. No settings, public API version, data migration, cache, watcher, timer or repair is added. Minimum Obsidian remains 1.10.0.
+
+The routing regression executes the real navigation manager with mocked API/UI boundaries; shared identity/creation semantics have separate composed tests. It covers archived collisions, recognized legacy notes, 100 unchanged opens, competing configuration, changed confirmation targets, cold identity, refusal/cancel and classification. Validation passed 117 focused, 1,356 declared-suite and 197 supplemental checks, with zero failures/skips, plus TypeScript and the separate normal Test build. Named disable/loadManifest/enable loaded 3.6.15 with unchanged data.json. Actual foreground UI verified template creation, an archived filename collision producing the correct confirmation, cancellation, refusal after the confirmed folder changed, and recognized legacy navigation with no creation/modify/process/rename. The legacy body replaced a distinct anchor body in 31 ms in one warm desktop sample; this is not a general speed claim. Four synthetic notes and their template were archived directly with byte checks; seven configurations and the prior leaf/window were restored. The scheduled-note button test temporarily disabled the competing top-parent navigation control in memory, then restored it. Templater, physical iPhone, cold startup and native-baseline parity remain unverified. See [3.6.15 release notes](release-notes/3.6.15.md).
+
+Measurement correction: the 3.6.14 repeated-template readiness probe checked the expected path plus a body marker shared by those templates. It therefore did not prove when the old body was replaced. Treat its repeated date-strip timings as provisional; first creation from an empty leaf and the source/operation-count regressions remain useful evidence. Future body-switch probes must require unique per-file content and disappearance of the previous content. No production speed or overall native-performance percentage is established.
+
+## 3.6.14 — Reuse Daily Note metadata readiness
+
+Daily Note reconciliation now consults the existing naming service's metadata-readiness result before its legacy whole-vault readiness check. That service already observes initialization/global resolution and pending current-source generations. Installed template creation previously repeated the whole-vault check three times while the owner already reported ready. The candidate identity index and all current-source, collision, configuration, template, and concurrent-generation guards remain in place. No cache, watcher, timer, setting, data migration, or API version is added.
+
+When the owner is unavailable or unready, the existing metadata wait/check still applies. Readiness skips inspection work only; it never authorizes writing stale content. Regression coverage counts enumerations and raw reads across 100 absent and 100 existing lookups, checks newer source identity and edits during reads, and retains unresolved-metadata gating. Minimum Obsidian remains 1.10.0. Validation and installed limitations are recorded in [3.6.14 release notes](release-notes/3.6.14.md).
+
+Final validation: 105 focused, 1,348 declared-suite and 197 supplemental tests passed with no failures/skips. TypeScript and the separate production build deployed only to Test; named disable/loadManifest/enable loaded 3.6.14 with unchanged data.json. Three actual foreground template creations recorded 379/317/314 ms to visible body versus 429/460/334 ms before; Markdown enumerations before display fell from 5/5/4 to 2/1/1, with unchanged create/write counts and no measured long tasks. The two date-strip repeat dates changed to avoid archived fixture-name collisions, so operation counts are stronger evidence than these small timing samples. Core-template variables, authored titles, a subsequent body edit and reopening preserved content. Seven runtime configurations were restored, all six created notes and two templates were archived directly, hooks removed and the prior empty leaf/window restored. Physical iPhone, cold startup and native-baseline parity remain unverified. Templater is disabled in this test vault. An independently reproduced date-strip filename fallback can open an unrelated archived note; that routing bug is recorded separately and is unchanged by this readiness patch.
+
+## 3.6.13 — Settle titles when filename edits finish
+
+A title-driven filename rename now refreshes the matching open title at core rename completion. Core could replace an already refreshed authored title with the sanitized or date-prefixed filename, leaving it wrong until the existing periodic title pass. The completion refresh reuses the current metadata renderer, stays read-only, and never rebuilds the note body or scans other notes. Unchanged filenames do not request another render.
+
+On a controller device with Auto-sync title from filename enabled, a committed ordinary Markdown rename now reaches the existing title writer immediately. File-property companion bookkeeping previously returned before that work, leaving an old frontmatter title to replace the newly entered filename on screen. This includes naming a note that still has `title: Untitled`. The correction stays in the existing rename listener and does not activate its unrelated delayed rules/timestamp work or add a timer, scan, watcher, cache or repair pass.
+
+Moves that retain the filename do no title reads/writes. A filename already generated from the authored title, including sanitization or a scheduled-date prefix, leaves that title alone. Protected/native/Daily Note exclusions stay with the existing naming service. Current source, path, newer title edits and the toggle are rechecked at the atomic write boundary. Title changes preserve the existing alias policy and unrelated body/frontmatter bytes. The existing User/mobile background-automation restriction remains: a core filename-only rename on those devices does not automatically rewrite frontmatter. Explicit GCM title edits work independently of that restriction. No settings, public API or data migration is required; minimum Obsidian remains 1.10.0.
+
+Regression coverage includes the actual rename listener, 100 unchanged/move calls, sanitized title ownership, newer edits/exclusions at queue and atomic boundaries, disabled settings and native records. Installed verification and final artifacts are recorded in [3.6.13 release notes](release-notes/3.6.13.md). This addresses reproduced stale/reverted naming feedback; it does not establish that every reported latency is resolved. Production and physical iPhone acceptance remain separate.
+
+Final validation: 1,344 declared-suite and 197 supplemental checks passed, no failures/skips; separate production build deployed to Test and named GCM reload preserved data.json. Three actual foreground Edit Title saves kept the correct authored title through rename completion at 61–76 ms, versus a 703 ms baseline reversal. Each made one write/rename, with no measured long tasks. Seven settings files and synthetic note bodies were preserved; probes removed, fixtures archived and prior layout restored. Controller-only rename dispatch was tested with a fixture-scoped authority simulation, not by enabling automation; User/mobile authority remains unchanged. These small warm desktop samples do not establish cold/mobile/production speed or the overall 80% native target.
+
+## 3.6.12 — Finish task creation before presentation
+
+The shared created-note handoff now awaits native task preparation after the creator finishes its initial filters/template work and before preview, open, explicit destinations or stay returns. Previously a metadata listener could add the native envelope and move an empty task after its editable title was already visible. Vault create and metadata events now only index/mark eligible files; they perform no draft reads or writes and start no eligibility timers. Preparation is consumed once, shares concurrent calls and reports a failure without silently retrying or authorizing a second creation/opening. Ordinary existing-note navigation never invokes preparation.
+
+This patch preserves the existing native envelope, canonical task folder, kind eligibility, exclusions and current-source atomic guards. Existing notes, body-bearing drafts, protected templates and already enveloped creations remain untouched. Creation routes that never call the explicit created-note handoff no longer trigger background task adoption. A late metadata change cannot reinterpret a completed creation. No new setting, public API version, cache, watcher or repair mechanism is added. A Base explicitly restricted to a different folder can still lose a task moved to the configured native folder; that separate location policy is unchanged. Nested-tag mapping behavior is unchanged.
+
+Validation includes operation counts for 1,000 post-layout creates and 3,000 metadata events, concurrent/repeated handoffs, edits/exclusions at the atomic write boundary, failure propagation, all presentation routes and read-only ordinary opening. Minimum Obsidian remains 1.10.0. Installed validation and final artifacts are recorded in [3.6.12 release notes](release-notes/3.6.12.md). This release is a test-vault/BRAT handoff; production and physical iPhone acceptance remain separate.
+
+
+## 3.6.11 — Refresh saved titles when metadata arrives
+
+The existing metadata-change listener now invalidates the changed file's title cache and immediately refreshes that file's open Markdown titles. A title-only edit previously refreshed the property menu but could leave the title waiting for the 900 ms recurring title/link pass. The fix uses current Obsidian metadata, stays read-only and scopes work to matching open views. Unchanged titles do not rewrite the DOM; active native title editing and strict-source filename display retain their existing guards. Title-driven filename updates remain owned by the frontmatter writer, including native-record filename protection.
+
+No new watcher, timer, retained cache, write, setting, schema or API version is introduced. The existing periodic pass remains responsible for dynamically remounted mobile title/icons and rendered links. This patch addresses delayed visible title feedback; it does not change core backlink rewrites, native-record identity verification or claim vault-wide performance parity. Minimum Obsidian remains 1.10.0. Five new regressions failed before the correction; all 54 focused title, source-mode, event-batching and open-refresh checks pass. The final versioned declared suite passes 1,322 checks and the supplemental suite passes 193, with no failures/skips. TypeScript, separate normal build/test deployment and named disable/loadManifest/enable verified 3.6.11. Three foreground native-record title edits appeared in 38.6–49.3 ms instead of 340.4–671.2 ms; save time remained 13.8–19.5 ms and each made one note modification. Ordinary title/filename editing also passed. Bodies, IDs, settings and previous view state were preserved; probes were removed and fixtures archived. The ordinary sample lost foreground before final inspection, so its timing is excluded from the paired foreground comparison. These small test-vault samples are not production/iPhone or native-performance guarantees. Details and artifact hashes are recorded in [3.6.11 release notes](release-notes/3.6.11.md).
+
+## 3.6.10 — Reuse frontmatter within relationship inspection
+
+Child discovery keeps one eligibility pass and lets the existing parent-resolution operation apply the child/parent ignore rules. Parent resolution reads the child's logical frontmatter once and shares that value between its ignore check and stored-link resolution. It previously reopened the same metadata or companion through nested helpers. Each new operation still reads current frontmatter; no value is retained between calls or passed into a mutation.
+
+Companion exclusion, Markdown versus attachment routing, native-architecture eligibility, custom parent keys and aliases, ignored parents/children and self-link filtering retain their existing policies. Explicit unlink still reads stored relationships even when display rules hide them. There is no new cache, index, hook, settings, schema or migration. Minimum Obsidian stays 1.10.0. One full candidate enumeration and parent-target checks still remain.
+
+Three composed regressions failed before the fix using the actual menu, relationship and file-properties services: ordinary candidates made nine metadata lookups instead of three, parent lookup reread child metadata five times instead of twice, and attachment lookup read its logical companion twice instead of once. All 42 focused menu/relationship/bridge checks now pass, including changed metadata/settings on the next call and moved companions. The final versioned declared suite passes 1,317 checks and the supplemental suite passes 193, with zero failures/skips, under Node 24.19.0/npm 10.9.2; TypeScript and the build-only suite build pass. The separate normal build deployed main/manifest into the test vault and named disable/loadManifest/enable verified 3.6.10. A final documentation rebuild was byte-identical. With Navigator held at 7.0.6, three actual foreground context menus reduced child-resolution metadata reads from 93,645 to 31,224 and its duration from 192.8–203.6 ms to 114.7–117.6 ms. The full menu facade measured 193.3–204.0 ms before and 115.2–118.4 ms after; these are operation samples, not physical input-to-paint/native-parity claims. Installed parent/child counts, linked entries and empty states passed, with source relationships/body preserved. Probe hooks, note/search and settings were restored; fixtures were archived. See [3.6.10 release notes](release-notes/3.6.10.md) for hashes and BRAT handoff. Production remains untouched.
+
+## 3.6.9 — Reuse relationship results while building a menu
+
+A file context menu now resolves its parents and children once, using the same arrays for the relationship counts and submenu contents. Previously the child count scanned every relationship candidate, then eager submenu construction repeated that complete scan before the user selected an action such as Rename. The arrays live only during that menu construction; reopening the menu reads current relationships. No retained cache, index, deferred submenu behavior, metadata-policy change, settings or migration is introduced.
+
+Parent/child labels, navigation and unlink actions, empty states, companion-backed attachments, mixed selections and ignore rules retain their existing behavior. One child-discovery scan remains necessary under the current relationship model; this patch removes its duplicate and does not claim zero menu-wide work or general performance parity. Minimum Obsidian stays 1.10.0.
+
+Two focused operation-count regressions failed against 3.6.8 and now pass, including a menu with 1,024 unrelated candidates and fresh data across later menus. All 39 focused menu-builder, parent/child-ignore and Navigator-bridge tests pass. The final versioned declared suite passes 1,314 checks and the supplemental suite passes 193, with zero failures/skips, under Node 24.19.0/npm 10.9.2; TypeScript and the build-only build pass. The separate normal build/test deployment and named reload passed. Three actual foreground Navigator context-menu openings reduced child-resolution work from two passes totaling 375–380 ms to one pass taking 197–203 ms; metadata lookups in that work fell from 187,158 to 93,579 per opening. These are instrumented test-vault operation timings, not physical click-to-paint or production guarantees. Installed parent/child counts, navigation/unlink entries and empty states remain present; fixture relationships and bodies were preserved. Settings stayed byte-identical, probes and note/search state were restored, and new fixtures were archived. See [3.6.9 release notes](release-notes/3.6.9.md) for full evidence and hashes.
+
+## 3.6.8 — One completion notification for property and title edits
+
+The shared frontmatter writer now announces a successful mutation after its existing title-driven filename operation, using the file's current path. Bulk edits and the Edit Title dialog no longer announce the same mutation again. A committed property write still announces its result if the subsequent filename step fails; rejected writes and unchanged values stay silent. Source attribution and explicit user-action events are preserved, and automation remains separate from explicit actions.
+
+Markdown property edits use their existing event-driven refresh. Bulk editing no longer adds a separate delayed Markdown menu refresh; attachment property targets retain their direct refresh and their existing source/companion notification owner. Edit Title retains its immediate local refresh. Custom text property rows now rely on the shared writer for filename changes, respecting Auto-rename being off and avoiding an independent rename after a rejected or unchanged edit. An unreachable duplicate title branch was also removed from the custom-property menu, which already excludes title fields.
+
+No settings, data schema, API version, watcher, cache, retry or repair pass is added. Existing metadata-triggered naming checks, configured rules, native-record protections and the separate Markdown rename-listener issue are outside this patch. Minimum Obsidian remains 1.10.0. Focused integrated regressions reproduced seven notification/ordering failures before correction and verify the actual title prompt, bulk service, frontmatter writer and filename service together; custom-property route regressions reproduced seven duplicate or unrequested filename calls. The final versioned declared suite passed 1,312 checks and the supplemental suite passed 193, with zero failures/skips, including TypeScript and a build with deployment suppressed. The separate final normal build deployed 3.6.8 to the test vault, followed by a named GCM reload with its updated manifest. An actual foreground Edit Title save produced one completion notification instead of three, one source modification and one filename rename, preserving the title and body. Menu refreshes fell from three to two, with the extra 350 ms refresh removed. Save time remained about 100 ms (99 ms before, 103 ms after), so this proves less repeated work rather than a latency improvement. Actual Navigator toolbar creation opened the configured preview; immediate title and body edits survived with one creation, one rename and two modifications. Settings stayed byte-identical, listeners and the prior note/search state were restored, and fixtures were archived. Full evidence, limits and artifact hashes are in [3.6.8 release notes](release-notes/3.6.8.md). Production and physical iPhone acceptance remain separate.
+
+## 3.6.7 — Reuse profile checks within one record inspection
+
+Native-record classification now evaluates each prepared storage-profile object at most once during one synchronous frontmatter inspection. The existing result map is owned by that inspection and shared by its identity-evidence, readable-profile and current-profile checks, including no-match results. It is discarded at return; a later call inspects current values again. Standalone source/candidate/persisted checks each get a separate map. No vault cache, watcher, background task, new setting or Health-specific classification is added.
+
+The classifier still applies all current and migration profile rules, identity conflicts, case-insensitive duplicate-key checks, timestamp/title conflicts, custom kind/title mappings, nested tags, property pairs and canonical calendar identity. Equivalent distinct profile objects remain independently checked; profile-key normalization and selection order are unchanged. Timestamp fallback stays on the existing copied envelope, and public returned profiles remain detached. Inputs, saved notes, settings, API version and minimum Obsidian 1.10.0 are unchanged.
+
+Four new operation-count regressions failed before correction. The complete native-record contract suite passes 115 checks, including a 1,000-note no-match burst, current and migration mappings, duplicate profile objects, conflicting evidence, timestamp fallback and edits to inputs/settings/returned values between calls. Default native classification falls from 21 to four profile evaluations and 18 to two envelope copies; with seven nested-tag mappings it falls from 83 to 15 evaluations and 17 to two copies. Ordinary notes fall from 14 to three evaluations, or 49 to ten with those mappings. These are synchronous test counts, not installed latency guarantees. The final versioned 1,293 declared and 193 supplemental checks passed with zero failures/skips, including TypeScript and a build with deployment suppressed. The separate normal build/test deployment and named reload passed. An installed foreground capture reduced one full Health rebuild from 397 to 149 ms; first visible content remained about 2.87 seconds, and another event ordering still caused two Health rebuilds. Nine in-memory installed classification checks retained identity, fresh inputs and detached results. Settings, original note state and profiling hooks were restored, and the fixture archived. No end-to-end latency or native-parity guarantee is made; complete evidence, remaining limitations and artifact hashes are in [3.6.7 release notes](release-notes/3.6.7.md).
+
+## 3.6.6 — Keep startup discovery and new-note title writes with their owners
+
+Obsidian announces every existing vault file with a `create` event while loading. GCM now ignores those initial announcements in its Daily Note invalidation and generic creation listeners until the workspace is ready, following [Obsidian's load-time guidance](https://docs.obsidian.md/plugins/guides/load-time). Cold readiness now waits for the existing public metadata `resolved` event instead of scanning every file on each per-file callback; hot reload retains its initialized snapshot (or waits for the next public resolution when that runtime flag is unavailable). Startup metadata continues to own initial Daily Note discovery; genuine modifications during loading and creation after layout readiness retain their existing current-source checks. Explicit configured startup rule application and attachment indexing retain their separate owners. No new readiness cache, timer, watcher or retry is introduced.
+
+Delayed filename-derived title initialization now rechecks the current title at the existing atomic, source-preserving frontmatter writer. A title typed while that work waits is retained, and a stale candidate is discarded if the file moved or changed basename. Only title and alias properties belong to this write; comments, unrelated formatting, body text and line endings stay intact. Existing scheduled-date/template title normalization, missing-title initialization and meaningful aliases remain supported. Native/workflow identity and configured tag exclusions are checked again against current frontmatter. The derived write emits its normal file update as automation, without treating it as another explicit user edit. Edit Title and preview title saves keep their existing user-action writer.
+
+This backward-compatible patch changes no defaults, settings, saved data schema or shared API version. Ambiguous duplicate title/alias keys are left unchanged by the existing source-preserving writer; no automatic consolidation or repair is added. The `onlyIfHasFrontmatter` condition remains a cached preflight: this patch does not redesign the pre-existing race where a user removes the entire frontmatter block before the write. Production and physical iPhone behavior remain user acceptance.
+
+Focused regressions reproduced 2,001 startup raw reads before the guard and require zero afterward; real pre-layout edits and post-layout creates still refresh current identity. Another regression reproduced 1,000 startup template/title/timestamp schedules and 1,001 rule schedules, requiring zero after the fix while preserving real creation behavior. Actual FileNamingService and FrontmatterMutationService regressions reproduce the title overwrite and verify authored titles at the atomic boundary, case variants, aliases, scheduled exceptions, exact-byte no-ops, current exclusions and repeated no-op counts. The first installed candidate exposed a second startup defect: removing redundant body reads exposed repeated whole-vault readiness scans. An added regression reproduces 4,003 enumerations and 8,010,003 metadata lookups before global resolution, requiring zero after removal of that fallback scan. Final source validation passed 1,293 declared, 187 supplemental and 105 focused checks with zero failures/skips under Node 24.19.0/npm 10.9.2. TypeScript and the separate normal build/test deployment passed. A named reload and foreground renderer restart verified the installed artifact. Startup raw reads fell from 10,787 to 413 with nine enumerations; the first visible body remained about 2.85 seconds and a separate 397 ms classification stall remains, so no end-to-end performance parity is claimed. Actual Navigator creation, immediate title entry, body typing and preview dismissal retained one file, one rename and matching content. Settings and original navigation were preserved, and fixtures archived. Details and artifact hashes are in [3.6.6 release notes](release-notes/3.6.6.md).
+
+## 3.6.5 — Stop unrelated work after edits and during startup
+
+Daily Note identity still invalidates and refreshes the changed source after note creation, editing and renaming. Settling that work now reannounces the shared GCM API only when a consumer actually encountered blocked identity. Previously every Markdown mutation armed an announcement, even with no waiting consumer, causing Navigator and Calendar to refresh unrelated indexes and views.
+
+Startup, API discovery requests, saved configuration changes, unload and genuine blocked-to-ready recovery retain their announcements. Current-byte identity checks, concurrent-generation protection, malformed-note safeguards and Daily Note creation behavior are unchanged. Time-tracking startup also keeps its existing guarded synchronization as the sole timer-discovery owner, removing a second unguarded startup scan. Disabled time tracking must not read every note to look for timers; enabled synchronization continues to discover stored sessions. This patch removes redundant triggers; it adds no cache, timer, watcher, setting, API version or repair pass.
+
+Regression coverage requires zero API announcements for unobserved settled create/modify/rename and a 20-edit burst, while current-source identity still changes correctly. A consumer that observes blocked identity receives one recovery announcement across duplicate metadata callbacks; failed reads, cold indexing and hot reload retain their coverage. The regression failed against 3.6.4 before correction. Installed 3.6.4 diagnosis recorded one API announcement for each of six ordinary body edits with no blocked identity reads. The versioned declared suite passed 1,269 checks and the supplemental suite passed 187, with zero failures/skips. Startup regressions also require zero enumeration/body reads when tracking is disabled and one discovery owner when enabled, including setting changes before the delayed callback. TypeScript and separate final build passed; deployment and a named reload verified 3.6.5 in Obsidian Plugin Test Vault. Six installed body edits emitted zero API announcements; settled samples made approximately half the previous native-record inspections and metadata lookups, with remaining consumer work still present. The installed compiled timer-startup fixture performed zero scans/reads/refreshes when disabled and one discovery/refresh when enabled. Twelve real Edit Title saves selected all text, preserved bodies and produced matching titles/filenames with one modify and one rename each. Real Daily Note API creation, repeat lookup and concurrent creation preserved one shared file and an immediate body edit. Test settings were preserved/restored. These counts do not establish production latency, physical iPhone behavior or native-performance parity; see [3.6.5 release notes](release-notes/3.6.5.md). Minimum Obsidian stays 1.10.0. Production installation remains the user's BRAT pull.
+
+## 3.6.4 — Keep unchanged preview controls mounted
+
+Native hover and Base preview properties now refresh from metadata and the existing DOM observer through one coalesced callback. A body write no longer forces every open panel to rebuild at 60, 250 and 900 milliseconds. Late mounting and path changes are observed directly, and explicit visibility/settings actions still force the intended update. Unchanged semantic frontmatter preserves the mounted controls; actual property, classification or visibility-rule inputs refresh them. The existing signature includes all semantic frontmatter keys so scope dependencies do not become stale, and ignores parser position metadata. No new setting, cache, watcher, migration or repair pass. Minimum Obsidian remains 1.10.0.
+
+Regression coverage executes the actual bridge methods across unrelated edit bursts, body-only metadata, changed fields, rule dependencies, file/path changes, explicit visibility actions and late mounting. Validation on 2026-09-27: 17 focused checks, 1,268 declared-suite checks and 184 supplemental checks passed, with zero failures/skips; TypeScript and the separate final build passed. The final build deployed only to Obsidian Plugin Test Vault; a named plugin reload verified 3.6.4. Installed preview QA reduced unrelated/body-only edits from five panel rebuilds to zero, and a changed property from five rebuilds to one. Late path assignment, same-value navigation to another file, and a preview inserted inside a prebuilt wrapper all mounted the correct property panel. Seven involved plugins' settings remained byte-identical. These operation counts do not establish general production latency or native-performance parity. See [3.6.4 release notes](release-notes/3.6.4.md) for limitations and artifact hashes.
+
+## 3.6.3 — Give title edits one filename owner
+
+Inline title rendering is read-only. It no longer queues filename reconciliation using a rendered or cached title. The previous path could undo an explicit preview rename, causing two file renames and repeated downstream refreshes. Explicit title writes and the existing metadata/modify naming path retain ownership.
+
+The new-note preview’s focused title field follows the same semantic title policy as the Edit Title dialog: it displays the note title and saves through the shared frontmatter writer. Auto-rename controls ordinary filenames; workflow-owned native filenames retain their existing protection. There is no independent preview filename write. Pending body edits settle through the existing preview save before a title mutation; failed saves keep the preview open and preserve typed input. The preview updates its existing body revision after its own successful writer without repairing note content or accepting an external body change.
+
+No new settings, caches, watchers, timers, migrations or repair passes. This is a backward-compatible fix, with minimum Obsidian 1.10.0 unchanged. Focused tests cover stale rendering, single rename ownership, preview title/body saves, rapid edits, failure and filename-policy cases. Final validation and release artifact hashes are recorded in [3.6.3 release notes](release-notes/3.6.3.md).
+
+Validation: 1,262 declared checks, 184 supplemental checks and 50 focused checks passed. The separate final TypeScript/build deployed 3.6.3 to the test vault; a named GCM reload with its updated manifest verified the version. The installed preview changed from two renames and a reverted filename to one rename with matching title and filename. Body edits, reopen, Auto-rename off, CRLF input and native task filename protection passed; runtime settings stayed byte-identical and fixtures were archived. Ordinary Edit Title save timing remained about 240 ms, so no general speedup is claimed for that dialog. Foreground captures had no long tasks; a detailed sample attributes most remaining save time to the required source read and Obsidian rename. Physical iPhone and production latency remain user acceptance. See the release notes for measurements, limits and artifact hashes.
+
+## 3.6.2 — Stop redundant lifecycle work
+
+Calendar button counts use Obsidian’s task metadata to skip reading bodies without checkboxes; missing metadata and real tasks still use the existing parser. Startup recurrence checking rejects notes without a recurrence rule before reading their source. Notebook Navigator appearance rules project their desired values from cached metadata before entering the authoritative writer; unchanged results do no raw protection reads or mutation attempts. Actual changes still recheck exclusions at the atomic writer and preserve current content. Creation uses one existing rule schedule instead of a second forced replay 3.8 seconds later. Filename synchronization has one existing debounced event path, and retired parent maintenance emits no false file-change/render notifications.
+
+No new settings, caches, watchers, repair passes or API versions. Explicit rules, template settlement, title/filename behavior, recurrence generation and actual link editing retain their owners. Regression coverage checks large unrelated note sets, repeated unchanged rules, exclusions changing at the write boundary, and empty parent maintenance. See [3.6.2 release notes](release-notes/3.6.2.md) for final validation and test-vault QA. Minimum Obsidian remains 1.10.0; production installation remains a BRAT update.
+
+Validation: 1,260 declared checks and 171 supplemental checks passed, including TypeScript. The separate final build deployed 3.6.2 to the test vault; a named disable/enable reload verified the installed version. An installed startup-candidate probe reduced raw reads for 128 nonrecurring notes from 128 to zero. With Navigator 7.0.2, Health 3.7.2 and Calendar 0.16.1 enabled, four test note switches made 448 identity inspections instead of 72,849 and returned in 20–29 ms. Real Calendar creation used the shared GCM registry, returned in 59 ms and opened the configured preview; title and an immediate body edit survived 4.5 seconds of settling. Runtime settings were preserved. These small desktop samples are not production/iPhone guarantees: the earlier background-window capture included a 904 ms timer delay (not a demonstrated CPU stall), and test-vault background automation remained disabled. A repeat with the test window visibly focused opened notes in 11–42 ms, with no long tasks and maximum timer drift of 18 ms. Full configured production profiling informed the fix, but production artifacts were not replaced.
+
+## 3.6.1 — Keep unchanged notes out of the maintenance queue
+
+Opening/leaving a note and layout readiness no longer schedule checklist-property or inline-checkbox reconciliation. Actual vault modifications/editor changes continue to own checkbox reconciliation; metadata/content changes and explicit synchronization continue to own checklist properties. Obsolete open-time relationship repair calls were removed. Existing explicit filename/title, presentation and Daily Note population settings retain their behavior; this release does not promise zero work from those configured open actions.
+
+Inline-checkbox reconciliation now checks cached content before entering `vault.process`. Unchanged notes make zero raw reads and zero mutation attempts. When a change is needed, the existing atomic writer recomputes against current content and checks path/tag exclusions again, preserving concurrent edits. Checklist/completed-date maintenance and Daily Note scheduled-field alignment also check for a possible change before its authoritative template-protection read. Read-only unresolved-link inspection uses live editor content or cached file content and skips notes that are no longer active; explicit body mutations retain fresh reads.
+
+Performance contract: keep ordinary navigation on UI/read-only paths; place maintenance on its owning content event or explicit action. Regressions count raw reads, mutation attempts and event scheduling, including repeated navigation with 1,000 unrelated files, no-op reconciliation, relevant edits, concurrent changes, template protection, Markdown examples and line endings. Do not replace a slow path with another cache, timer, watcher or repair pass. No settings/schema/API migration or automatic note repair is introduced.
+
+Validation: 1,253 declared tests, 171 supplemental tests and 49 focused checks passed; TypeScript, separate final build and test-vault deployment/reload passed. Four installed note switches reduced raw-read calls from 20 to 8 and mutation attempts from 3 to 0, preserving source. A real edit still reconciled its checkbox date and a repeat made zero changes. Temporary settings were restored, runtime settings stayed byte-identical and fixtures were archived. Timing samples and limits are recorded in [3.6.1 release notes](release-notes/3.6.1.md). Minimum Obsidian remains 1.10.0. This patch is a BRAT handoff; production and physical iPhone latency need user verification.
+
+## 3.3.3 — Keep title renames tied to the saved title
+
+The GCM **Title: …** action in note menus and inline titles now lets the existing frontmatter writer own filename updates. Previously the menu performed a second filename update with the requested title even when the property write was cancelled or rejected. This reproduced `After.md` with `title: Before` in the test vault when the existing frontmatter safety check rejected the write. Removing that redundant rename prevents the mismatch at its source. An unchanged/cancelled/rejected write also stops before success events and refreshes, with a concise `rename:not-applied` diagnostic.
+
+Successful title saves still honor Auto-rename and the existing filename exclusions/collision protection. Turning Auto-rename off continues to change only the title. No settings, migration, watcher, retry or repair behavior was added; existing mismatched notes are not rewritten. Navigator's separate native **Rename note** action is unchanged. This fixes the reproduced GCM path; the user's exact menu action and rejection reason have not been independently confirmed.
+
+Validation: regression tests failed on 3.3.2 for the rejected-write mismatch and duplicate rename call, then passed after removal. Focused tests cover unchanged/rejected writes, successful title edits, Auto-rename off, exceptions and Navigator menu routing. Full suites, final versioned build/test deployment, named plugin reload and installed title-dialog verification are recorded in [3.3.3 release notes](release-notes/3.3.3.md). Physical iPhone testing remains user acceptance. Minimum Obsidian remains 1.10.0; production installation is a separate BRAT pull.
+
+## 3.3.2 — Keep automatic appearance writes on the Controller
+
+Opening a note previously bypassed GCM's existing device-role check. A mobile/User device could append icon/color while the Controller independently added the same fields to another revision of a newly created note. The installed test-vault reproduction uses the real User file-open and Controller create rule paths: both outputs are valid YAML, but Obsidian's editor merge duplicates the appearance lines when the revisions also differ in timer metadata/body text.
+
+Automatic rule scheduling and execution now respect the existing Controller/background-automation authority, including file-open, create, rename, startup and integration create reasons. The check is repeated when queued work executes, so a role change cannot leave an old write authorized. Explicit Apply rules actions remain available on every device. Read-only icon/color and virtual-sort projection remains available on mobile/User devices without writing the note; stored automatic appearance updates come from the Controller. No new settings, state, timers, retries, migrations or dependency were added.
+
+The automatic duplicate-repair helper and callback contract introduced in 3.3.1 have been removed. Existing malformed notes remain untouched. The prevention change is two authority checks in the existing rule service; the shared frontmatter writer returns to its pre-3.3.1 implementation. Health's workout creation code does not require a change.
+
+Validation on 2026-09-25: 41 focused checks, all 1,232 full-suite checks and 160 additional checks passed. Installed 3.3.1 produced two icon/color pairs and invalid YAML using User file-open plus Controller create revisions and the real Obsidian editor merge, with its repair helper disabled for the fixture. Installed 3.3.2 produced one pair, valid YAML and retained local body edits through the same sequence. Installed User-role projection returned the expected icon/color without a write; automatic application returned false and explicit Apply returned true. Health/GCM settings remained byte-identical; fixtures were moved directly from Inbox to `_archive/QA-creation-cause-20260925`. Final TypeScript/build deploys only to the test vault, followed by `plugin:reload id=tps-global-context-menu`. Details and hashes are in [3.3.2 release notes](release-notes/3.3.2.md). Physical iPhone/Obsidian Sync transport was not exercised; the reproduction uses the installed editor's merge with independently generated revisions. Production remains a separate BRAT update. Minimum Obsidian remains 1.10.0.
+
+Shared properties, entity and task contracts, context menus, note interactions, and TPS Table/List Base views.
+
+Current release: [7.3.15](https://github.com/ZachTish/TPS-Global-Context-Menu/releases/tag/7.3.15) · Obsidian 1.10.0+ · Desktop and mobile.
+
+## Install with BRAT
+
+Add `ZachTish/TPS-Global-Context-Menu` to BRAT. Use manual updates with `Latest`, or freeze an exact numeric tag for a controlled rollout. Each release supplies `main.js`, `manifest.json`, and `styles.css`; release notes record validation and artifact hashes. A published release is not evidence that any device has installed it.
+
+## Fresh food saves — 3.3.0
+
+Health 3.2.1+ uses the additive `nativeRecords.createFresh(kind, properties, options)` method, advertised by `capabilities.freshIdentityCreates`, to allocate a new record identity without a vault-wide source scan. GCM generates a cryptographically random UUIDv4 through Web Crypto, retains its kind prefix, and returns the stored ID. Callers cannot supply an ID, plan token, expected path or protected identity property. This route relies on standard random UUID uniqueness rather than searching all files for its newly minted ID. Known index conflicts, in-flight reservations, exclusive mutation plans, safe path allocation, property validation and non-overwriting Vault creation still apply.
+
+Existing `create`/resolve/update/reidentify/identity-plan contracts retain authoritative source verification, including IDs missing from stale metadata and malformed or nonstandard YAML. `createFresh` does not mark an unverified global index as verified and does not wait for an already-running scan. If secure random generation is unavailable, it falls back to the existing verified creation path. API v6 remains compatible; consumers must feature-detect both method and capability. No private metadata-cache API is used. No existing notes, IDs, settings, schemas, navigation or defaults migrate. Minimum Obsidian remains 1.10.0.
+
+Install GCM **3.3.0** with Health **3.2.1** for the food-save fix. This optimization applies to allocating new food-entry IDs; identity-sensitive edits and reconciliation retain their existing checks. The first save no longer depends on the number of Markdown notes or on a vault-wide indexing pass finishing. Physical device timing is not inferred from desktop measurements. Regression coverage and installed test-vault measurements are recorded in [3.3.0 release notes](release-notes/3.3.0.md).
+
+Validation on 2026-09-23: GCM passed 101 focused native-record checks, 1,228 full-suite checks and 160 additional checks; Health passed 480 checks with zero failures and one optional live USDA test skipped without its credential. Installed test-vault QA forced the GCM source index cold, logged two synthetic half-servings through Health, and verified 100 calories plus matching returned/persisted UUIDs. The first complete save took 585 ms (107 ms native entry creation), the second 102 ms (41 ms native entry creation), with zero global verification reads. The pre-fix cold save took 6,824 ms and 9,044 source reads. These are desktop measurements; physical iPhone timing is not claimed. Both runtime settings files stayed byte-identical, probes/folder overrides were restored, and fixtures were archived directly to `_archive/QA-food-fresh-final-20260923`. No providers or production vault were accessed. Separate final TypeScript/build deployments and named test-vault reloads validate the release artifacts.
+
+## Configure fields and workflows
+
+The settings hub opens on **Rules & fields**. Other destinations are **Menus & surfaces**, **Workflows**, **Appearance**, and **Advanced**.
+
+- **Custom fields** defines keys, labels, types, value sources, and visibility. Search by name/key or filter by type; only one property editor stays expanded. Search and disclosure state are transient.
+- TPS Notebook Navigator 6.1.0+ imports defined keys through `api.propertyCatalog` version 1. Existing Navigator ordering and visibility win; removing a GCM definition does not delete note data or Navigator configuration.
+- Whole notes are the supported record model. GCM owns shared identity, configured field mappings and status choices consumed by other TPS plugins; inline records are retired.
+- Navigator presentation rules provide virtual sorting/icon/color values. User-authored icon, color, sort, and hidden properties are preserved during recurrence cleanup.
+- Linked menus, recurrence, timers, and Daily Note workflows use their configured fields. Source mode shows source rather than replacing the note with a rendered TPS surface.
+
+## Two-level Daily Note identity — 2.4.0
+
+Daily Notes may use `kind: note` together with `noteKind: daily`. Both values are required for this new identity route; keys and values are case-insensitive and surrounding whitespace is ignored. Existing Daily kind/type/tag aliases remain supported. This is an additive identity feature, not a general subtype hierarchy or a note migration.
+
+The pair supplies Daily identity while the configured filename or existing scheduled/title date supplies the date. Templates can use the pair without being mistaken for a dated Daily Note while their date is unresolved. Creation preserves both authored properties. Navigator's Core Daily Notes mode, date lookup, legacy reconciliation, navigation, and task-date inheritance consume the shared classifier. Calendar 0.14.0 adds matching task-placement support for explicitly selected Daily Notes.
+
+`kind: note` alone, `noteKind: daily` alone, other note subtypes, and task/workout/calendar identities do not gain Daily identity through the pair. A date-only note with no kind still follows the existing path-based behavior. Mixed/conflicting kinds, conflicting dates, malformed YAML, and current-source checks retain their protections. No defaults, saved settings, or public API versions change; put the pair in a note or the configured Daily Notes template to use it.
+
+Regression coverage includes canonical/named files, case and single-value list compatibility, template date absence, reconciliation with unchanged metadata, incomplete pairs, conflicting record/date identity, and stale-cache rejection. Tests, final build/deployment, test-vault reload and installed creation/reopening QA are recorded in [2.4.0 release notes](release-notes/2.4.0.md). Validation on 2026-09-20 passed 1,158 full-suite checks, 125 additional checks, and 97 focused checks; TypeScript and the separate final build deployed to the test vault. After `plugin:reload`, Navigator created and reopened the paired-template note with both fields intact; provider lookup recognized canonical and named paired notes and excluded the ordinary-note control. Temporary defaults were restored and QA fixtures archived. Minimum Obsidian remains 1.10.0; production installation is a separate BRAT update.
+
+## Daily Note reliability — 2.3.1
+
+Malformed YAML in an unrelated project or archived note no longer locks all Daily Note creation through GCM, including Navigator's calendar and daily-note command. Invalid files stay untouched and excluded from the identity index. No settings, API versions, or note data migrate.
+
+Potential Daily Notes remain conservative blockers: date-shaped paths, last-known Daily identity, raw Daily markers, and escaped/aliased malformed YAML. Conflicting identities, unreadable or unresolved sources, canonical target occupancy, and malformed selected notes retain their existing guards. A malformed note containing an incidental Daily marker can still require repair before creation; this is intentional duplicate protection.
+
+Focused regressions cover the archived-project mixed YAML mapping/list failure, unrelated malformed files, existing/new days, possible Daily identities, and recovery after repair. Validation on 2026-09-19: all 1,154 `npm test` checks and 125 additional `prepretest` checks passed, plus 93 focused Daily Note checks. The separate production build deployed to the test vault and `plugin:reload` loaded 2.3.1. The previously blocked provider call succeeded; Navigator’s confirmation created and opened one templated note, and reopening made no duplicate. The malformed fixture remained unchanged and temporary defaults were restored. Installed UI QA used Core template tokens (Templater is not installed in the test vault); Templater behavior remains covered by the existing automated suite. See [release notes](release-notes/2.3.1.md). This patch is a BRAT handoff; production installation and acceptance remain separate.
+
+## Conflict-aware reconciliation — 3.2.0
+
+The additive `nativeRecords.capabilities.conflictAwareSnapshots` capability enables
+`snapshot(undefined, { includeConflicts: true })`. The result includes only uniquely
+owned writable records, plus detached diagnostic entries (`path`, `ids`, `kinds`,
+`frontmatter`) for all excluded owners. Callers must reject conflicts relevant to
+their domain before planning writes. Default snapshots and lists remain strict.
+Global identity reservations, token/revision checks, source validation, malformed
+YAML rejection, and exact batch preflight remain enforced. This does not repair or
+migrate conflicting notes. Controller 2.4.2 uses it to keep unrelated invalid notes
+from blocking calendar imports. Existing API v6 remains compatible; feature-detect
+the capability. No settings, navigation, or defaults change.
+
+Validation (2026-09-23): the full declared suite, focused identity-conflict tests,
+TypeScript, and final production build pass. Test-vault CLI reload verifies the
+versioned artifacts. Installed Controller/GCM QA creates an event beside an
+incomplete unrelated record, repeats with zero creates and unchanged bytes, and
+rejects a duplicate calendar owner before writing. The unrelated note stays
+byte-identical. Synthetic fixtures were archived directly from Inbox; settings
+and outbound automation were preserved. This is a BRAT handoff, not evidence of
+production installation or user acceptance.
+
+## Integration
+
+Consumers should feature-detect the enabled plugin's API and its versioned capabilities. GCM provides entity discovery, line metadata, Base query/creation helpers, property editing, note opening, template protection, and the property catalog. Domain plugins own their own records and provider operations.
+
+TPS Home was removed in 2.0.0. Older Home descriptions in [the historical reference](REFERENCE.md) are historical and must not be used as current setup instructions. Calendar owns calendar views; Health owns nutrition/workout flows; Controller owns automation and Plaid transport.
+
+The reference retains the detailed APIs, settings contracts, and validation records without placing the release log ahead of setup. Current interfaces live in [src/plugin-api.ts](src/plugin-api.ts); configured behavior lives in [src/settings-tab.ts](src/settings-tab.ts).
+
+## Development and repository policy
+
+`main` is the stable source line. Numeric tags identify immutable released artifacts. `optimization` is an unreleased work-in-progress lane; do not install it through BRAT or merge it into stable without separate validation.
+
+The supported build lives inside `Obsidian Plugin Test Vault/Plugin Development`, with `TPS-Global-Context-Menu (Dev)` as the mapped stable source. These repositories depend on adjacent shared tooling including `deploy-runtime.mjs`; a standalone clone is not currently self-contained.
+
+From the contained workspace, prepare dependencies using the shared helper, then run tests and a separate final build:
+
+```sh
+# From Plugin Development:
+node ./prepare-dependencies.mjs "TPS-Global-Context-Menu (Dev)"
+cd "TPS-Global-Context-Menu (Dev)"
+npm test
+npm run build
+```
+
+Dependencies stay in the vault's `.plugin-dev-cache.nosync` through a relative `node_modules` symlink. Use a clean, current checkout; preserve unrelated changes and never build an old dirty worktree into the test runtime. Stable builds deploy only shipped artifacts to the test vault. Optimization builds are build-only. Runtime `data.json`, secrets, caches, and session state never belong in Git.
+
+Documentation-only maintenance does not create a new plugin version. Published release tags and assets are preserved. Do not rely on legacy version/release scripts without reviewing their current behavior. Production updates remain the user's BRAT handoff.
+
+For prior feature details and release-specific evidence, see [REFERENCE.md](REFERENCE.md) and [GitHub releases](https://github.com/ZachTish/TPS-Global-Context-Menu/releases). The September 16 cleanup changes documentation and repository metadata, not shipped behavior.
+
+## 2.5.0 — Shared note creation opening (2026-09-20)
+
+GCM owns **Menus & surfaces → Note opening**: **After creating a note** chooses Editable preview, Open note, or Stay in current view; **Open destination** chooses current/new tab for Open note and the preview's Open button. Fresh installations default to preview/current tab. Existing installations import Calendar's `postCreateBehavior` (or legacy false `openTaskDestinationAfterCreate`) and Navigator's `createNewNotesInNewTab` once, only for missing GCM keys. Migration reads those plugins' preferences without rewriting them. GCM's persisted keys are `notePostCreateBehavior` and `noteOpenDestination`; subsequent changes are authoritative regardless of plugin startup order.
+
+Native embedded/standalone Bases, TPS Table/List note creation, Calendar 0.15.0+, Navigator 6.3.0+, GCM attachment-note creation, Create task native records, and newly created task-associated notes share this policy. Existing-note navigation, explicit destination overrides, legacy inline task/line creation, background imports, core New note, and independent third-party creation commands retain their own semantics. This is a post-creation policy; it does not change folder, template, filter precedence, identity, or record payloads.
+
+The native Bases adapter checks the native menu's create/frontmatter/open ordering and wraps that menu only. A per-operation app/file-manager facade delegates native folder/file/frontmatter work, then a private completion signal stops native presentation before the iPhone tab branch. It neither patches the real FileManager nor observes unrelated vault creates. Duplicate activation while one menu creation is pending is ignored. Missing/changed native contracts preserve native behavior and log a warning; unloading restores the original handler. The installed 1.14.1 runtime and 1.14.2 source contract were checked. Native template behavior is preserved (including its choice of template metadata rather than inferred filters).
+
+The editable preview retains the originating surface, offers note-name editing for newly named files, body autosave, properties, Open note and Dismiss. Rename errors keep it open; Escape in the name field restores the current filename; Enter saves the name and enters body editing. Body and title changes flush before dismiss/open. Mobile uses the existing keyboard-aware overlay, a 16px name input and 44px Open/Dismiss targets. iOS may require a tap to raise its software keyboard after asynchronous creation. Preview failure retains the note/current view and offers an explicit Open action. Opening failure is reported without recreating or retrying the note.
+
+Additive `api.ui` v1 capabilities: `presentCreatedNote({filePath, sourcePluginId, anchorEl?, sourceLeaf?, renameTitle?, explicitDestination?})`, `handlesNativeBaseCreation(controller)`, `getNoteOpeningSettings()`, and `openNoteOpeningSettings()`. The creator must finish initial template/filter writes before calling this handoff. It awaits eligible native task preparation before presentation (including stay); ordinary `open` never prepares. Presentation returns false only for an invalid/missing file; true acknowledges handling, including stay or a reported preparation/presentation failure. Consumers should feature-detect. Explicit destinations are `tab`, `split`, or `window`. Existing preview/navigation APIs are unchanged.
+
+Validation uses `scripts/test-note-opening.mjs` (routing, desktop/mobile preview, migration, native defaults/callback preservation, failure/cancel, repeated activation, unload), the existing preview/write-ownership/task suites, `npm run prepretest`, `npm test`, and a separate `npm run build`. Test deployment uses the shared helper and only shipped artifacts; reload uses the test-vault plugin reload command. Desktop QA in Obsidian Plugin Test Vault verified the embedded native Table New button, keyboard creation, preview rename/body persistence without extra tabs, stay, open/new-tab, and native template metadata versus active-view/Base defaults. Physical iPhone acceptance remains for the user's BRAT test. Minimum Obsidian stays 1.10.0; unsupported native contracts use Obsidian's own behavior. This is a backward-compatible minor feature release, not a production installation.
+
+Final validation: 1,166 full-suite checks plus 126 additional checks passed; the separate production build deployed only shipped test artifacts. The final 2.5.0 reload passed rename-conflict protection and automatic-rename path tracking. Calendar and Navigator settings handoffs were exercised in the test vault. Existing runtime state was retained by the shared deploy helper; QA opening preferences and the temporary native-record root were restored. Synthetic notes were archived after verification. Physical iPhone validation remains pending.
+
+
+## 2.5.1 — Preserve title capitalization in filenames (2026-09-20)
+
+With Auto-rename enabled, title changes that only change case now rename the file too: `TishOS V0.2.md` becomes `TishOS v0.2.md` when the authored title uses a lowercase `v`. Both explicit title editing and the existing metadata-driven filename sync use exact-case equality for the no-change guard. Obsidian's FileManager performs the rename and link updates; no temporary note or direct filesystem rename is introduced.
+
+Exact and case-insensitive sibling collisions still prevent overwriting another file. An existing lookup that refers to the same file permits a case-only rename. Daily/workflow filename ownership, creation grace, automatic-write exclusions, malformed-source checks, and the Auto-rename preference are preserved. No setting migration or bulk rename is performed. Navigator 6.4.0 independently recognizes folder notes by their authored titles.
+
+The filename regression exercises the actual FileNamingService against case-sensitive and insensitive lookups, explicit and metadata title routes, idempotence, collision protection, content preservation, and exclusions. Required validation is the focused Daily Note/filename suite, `npm test`, `npm run prepretest`, and a separate production build, followed by deployment/reload and title-edit QA in Obsidian Plugin Test Vault. Minimum Obsidian remains 1.10.0. This is a patch release and a BRAT handoff; physical iPhone acceptance remains pending.
+
+Test-vault UI validation on 2026-09-20 used the Edit Title dialog and Save action to change `TishOS V0.2` to `TishOS v0.2`. The actual FileManager rename succeeded on macOS's case-insensitive filesystem, the old path disappeared, the title matched, and the body remained intact. Auto-rename and Navigator QA preferences were restored and synthetic notes archived. Full validation passed 1,167 declared test checks plus 126 additional checks before the separate final build/deployment and plugin reload.
+
+
+## 2.6.0 — Confirmed property migrations (2026-09-20)
+
+Changing a custom field's **Frontmatter Key**, an integration property name, or a timestamp, view-mode, time-tracking, task-reveal, or child-parent property key now edits a draft. **Apply** scans Markdown frontmatter and shows the old/new key, affected note paths, count, and conflicts. **Confirm update** changes existing notes before saving the configuration. Cancel does neither. The scan includes archived notes and templates because this is an explicit migration, not background automation. Scanning shows persistent progress with a Cancel scan action and uses at most eight concurrent reads. Unloading GCM cancels a pending scan. No new persistent preference or settings navigation destination is introduced.
+
+Custom property options/suggestions also use Apply. Replacing exactly one option with one new option proposes a stored-value migration. Additions/removals/reordering are explicitly confirmed as suggestion-only changes; multiple simultaneous replacements require individual **Rename stored value** actions so GCM never guesses the pairing. Rename stored value also works for vault-derived values. Values match exact strings or top-level list items under the selected case-insensitive property key; numeric/boolean values, nested objects and link targets are not coerced. New numeric-looking strings remain quoted strings.
+
+The YAML range planner preserves unrelated properties, comments, line endings, BOM and the complete note body. Existing destination keys (even equal-valued), duplicate keys, relevant malformed YAML, merge keys, and unsafe alias/anchor/tag cases block the whole migration. Multiline value replacements require manual editing; renaming a key whose value is multiline is supported. Unrelated malformed notes do not block a migration. GCM rechecks settings and rescans notes after confirmation, then compares exact source before each write. A stale preview must be reviewed again. A failed partial migration restores unchanged migrated notes and settings; concurrent edits are never overwritten.
+
+A temporary private `property-migration-recovery.json` inside this plugin's runtime folder stores original/replacement note snapshots and only changed configuration groups. It is verified before note writes and removed after success or complete rollback. An interrupted migration blocks further migrations until **Advanced → Restore interrupted property migration** succeeds. Conflicting subsequent edits keep recovery available for manual resolution. This file can contain note content and must not be committed or attached to support reports. GCM metadata/modify filename automation is suppressed during the transaction; external plugins and other devices are not locked. Avoid editing the same properties from another device during migration.
+
+Known GCM references follow renames: matching custom fields, scoped/hidden property conditions, declared property-key settings, ignored backlink keys, virtual Base embed keys, exact view-mode/Navigator conditions and sort-value inputs, status option/classification/checkbox mappings, and Kind acceptance constraints. Changing a filter or rule criterion directly still changes selection only. Template identification is a discovery rule and retains its existing behavior. Inline fields, note prose, `.base` formulas, external plugin configurations, core property-type metadata, and hard-coded TPS record contracts are outside this frontmatter migration; review those references separately. Integration read aliases remain available. Other TPS plugins' mappings must be updated separately.
+
+The existing five settings destinations and defaults remain unchanged. The preview is a single modal with a scrollable path/conflict list, native Cancel/Confirm buttons, visible keyboard focus, and wrapping 44px actions on narrow screens. Validation is `scripts/test-property-migration.mjs` plus existing property-identity/managed-field suites, the full declared tests, `npm run prepretest`, and a separate production build. The shared deployment helper publishes only shipped artifacts to Obsidian Plugin Test Vault; reload uses the targeted plugin reload command. Minimum Obsidian remains 1.10.0. This is an additive minor feature release for the user's BRAT pull; physical iPhone acceptance remains pending.
+
+Final test-vault validation: 1,193 declared checks and 126 additional checks passed. The final versioned production build deployed to the test runtime and was reloaded. UI QA reviewed the two-note preview, cancelled without writes, confirmed a property-key rename, then confirmed an exact string-value rename in both scalar and list storage. Comments, unrelated properties and bodies were preserved; manual options followed the value rename and the recovery file was removed. Original property definitions were verified unchanged and restored by removing the synthetic field; fixtures were moved directly to `_archive`. The preview was visually inspected in the test-vault settings window. Physical iPhone testing remains pending.
+
+
+## 3.0.0 — Confirmed current mappings
+
+Advanced exposes Record kind key as a single current mapping. Apply previews all matching Markdown frontmatter, including archives and templates, confirms, migrates notes, and saves configuration last. Integration fields stop reading earlier names; historical configured names are migration input only. Native identities use only the current profile in ordinary reads; legacy identity evidence still guards duplicate IDs and protected fields. Consolidate records requires confirmation and retires aliases after success.
+
+Major: removes implicit reads of historical record and integration mappings. Existing navigation destinations, default routes, disclosures, commands, and persisted UI-state contract are unchanged. Mapping controls are plain inputs with an explicit Apply action and wrapping layouts; no alias editor is added. Cancel preserves the current mapping and notes.
+
+Shared migrations change Markdown frontmatter only, preserve note bodies, reject occupied destinations and stale previews, and keep a local recovery copy until success. Inline fields, Base formulas, per-view configuration, and disabled plugins are not automatically rewritten; enable participating TPS plugins before a shared rename. Review historical records before relying on totals after upgrading. Health timing migration uses its existing guarded rollback flow; a process crash cannot provide a vault-wide atomic transaction. No migration or outbound service runs merely because the plugin is upgraded.
+
+Validation covers current-only reads, migration-only historical inputs, cancellation, archived notes, conflicts, stale previews, save/write rollback, cross-plugin setting changes and identity protection. Required final validation: full declared suite, separate production build to the test vault, named plugin reload and settings confirmation checks. UI and final test results are recorded in the release notes. Minimum Obsidian compatibility is unchanged. Update GCM before applying Controller or Calendar mapping changes. The release is a BRAT handoff; production installation remains user-controlled.
+
+Full declared suite: 1,199 checks passed, 0 optional/existing checks skipped, zero failed. Plus 127 additional checks passed. TypeScript and separate final production builds pass and deploy only shipped artifacts to the test vault; targeted plugin reloads verify the installed versions. Test-vault validation (2026-09-20): Controller’s real Apply dialog previewed one synthetic Markdown note and two plugin mappings. Cancel preserved both mappings and the original file; confirming renamed the property and updated Controller and Calendar together, preserved the body, restored input focus, and removed temporary recovery. Original settings were restored and the fixture archived. GCM’s current kind key and migration controls were inspected. Calendar’s five rendered key inputs and Apply actions were verified. Health’s timing inputs were checked; an existing archived QA note with potentially relevant malformed frontmatter correctly blocked migration with a path-specific error and no changes. Successful Health confirmation, timing conversion, cancellation and rollback are covered by regression tests. No outbound automation was enabled. Existing mobile CSS/layout is retained; physical iOS testing remains user acceptance.
+
+
+## 3.1.0 — Independent Health entry keys
+
+Health → Note library now offers an editable **Entry and session frontmatter key** beside the entry/session values. Food definitions and reusable workout/exercise templates keep their existing separate key controls. All groups may use the same key (for example `kind`) or different keys (for example `entityKind` for templates and `entryKind` for logged records). Entry-key Apply previews and confirms only Health native food/activity entries, workout sessions and legacy workout exercise records, including archives. Templates and other TPS records are not renamed by this scoped action. Matching values must remain distinct when records share a key.
+
+GCM 3.1.0 stores the current physical key per record kind in `nativeRecordKindPropertyKeys`; the empty default preserves existing storage. The mapping survives Health being disabled. Native creation, reads, updates, identity changes and consolidation use the selected key; old keys are never fallback readers. Its nativeRecords API v6 adds the optional `kindPropertyKeys` capability, kind-aware `getStorageProfile(kind)`, and guarded key-map access/configuration. Health kind-value migrations carry the key binding to the new value and restore it on save failure. The global GCM key rename remains a broader explicitly reviewed operation.
+
+This is a backward-compatible minor feature. Existing settings routes, default Rules & fields route, disclosures and mobile wrapping layout remain. The new field is a labeled plain input with Apply/Enter, migration preview and focus restoration; no navigation state is persisted. GCM owns the stored record binding while Health owns the settings surface. Update GCM before configuring this feature. Conflicts, stale previews and active workouts block writes; the existing recovery/rollback limits remain. Inline fields, Base formulas and per-view mappings are not rewritten. Unrelated malformed templates are ignored by the Health-scoped scan; possibly matching malformed records must be repaired.
+
+Validation: focused coverage exercises shared/separate keys, strict reads, creation/edit/reidentification, template/task isolation, cancel/confirm, stale maps, value-change binding retention and rollback. Full suite, separate final build, test-vault reload/UI results and artifact hashes are recorded in this release's notes. Production remains a user-controlled BRAT pull; physical iOS acceptance is pending.
+
+Installed test-vault QA (2026-09-20): used the actual Health Note library Apply control to preview two synthetic logged records. Cancel left their keys and the saved map unchanged. Confirm moved only the food entry and workout session; the reusable template and task stayed on their original key. A newly created record used only the separate physical key, and an edit retained it. A second UI confirmation moved all three logs back to the shared key. All four original bodies were preserved, focus returned to the labeled input, and recovery was cleared. Original settings were restored and all five fixtures archived. At a 388 px settings container width, the control row measured 283 px with 283 px scroll width and no overflow. Physical iOS acceptance remains user testing. No outbound automation was enabled.
+
+Full suite: 1202 passed, 0 optional skips, zero failed. Additional suite: 131 passed. TypeScript and separate final builds deployed only shipped files to the test vault; targeted reloads verified version 3.1.0.
+
+## 3.1.1 — Smoother note opening
+
+The active-view watcher refreshes completed-task widgets without reconfiguring every Markdown editor. Previously each file/mode change called Obsidian's global `updateOptions()` twice; Obsidian already configures the opened editor. Settings changes still explicitly reconfigure editors. GCM also avoids its second focus request when Obsidian has already activated the destination. Reusing an existing note, background opens, pinned-tab routing, and fallback activation retain their behavior.
+
+No settings, defaults, records, or public API contract change. This is a backward-compatible performance patch. Focused behavioral tests exercise widget refresh versus settings refresh and foreground/background/existing-note activation. Full tests, a separate final build, test-vault deployment/reload and navigation QA are recorded in the release notes. Minimum Obsidian stays 1.10.0; production remains the user's BRAT pull.
+
+Installed QA: the same four-note-open sequence dropped from eight global editor reconfigurations to zero, with four native focus calls instead of five. Reading, Source and Live Preview transitions retained the exact note body; a settled manual scroll retained its position and cursor. Full suite: 1,207 passed plus 131 additional checks; TypeScript and final build passed. Test deployment and explicit reload used only Obsidian Plugin Test Vault. QA fixtures were archived, temporary runtime probes removed, and original navigation restored. No settings were saved or outbound automation enabled. See release notes for final artifact hashes.
+
+
+## 3.1.2 — Consolidate action refreshes (2026-09-21)
+
+Property metadata changes and their parent updates now enter the existing per-file overlay batch directly. This removes the second delayed forced render and preserves every file in a multi-file edit. Opening a note mounts its menu once without also queuing a redundant file refresh; native view lifecycle, mobile attachment retries, typing guards, and explicit commands remain available.
+
+The GCM events API delivers each GCM-emitted file update, explicit action, and Calendar refresh once. Both raw workspace event names still fire for existing integrations. Independent legacy/canonical producers, nested actions, consecutive updates to the same file, caller attribution, and unsubscribe remain supported. This is synchronous identity-based handling of GCM's own mirrored emission, not a time-based filter across external producers. A consumer directly subscribing to both raw names must still choose/deduplicate its own subscriptions.
+
+Navigator presentation invalidates the resolved file and its tracked dependents instead of clearing every prepared record whenever a metadata batch settles. One initial full settlement remains for startup link resolution, along with existing full invalidation for create/delete/rename, settings and date changes. Retired reference-panel cleanup inspects existing footer hosts instead of creating and immediately removing an empty host on every menu refresh. Shared nonempty hosts stay mounted. No preferences, frontmatter or API versions migrate.
+
+Behavioral regression coverage lives in `test-gcm-event-service.mjs`, `test-note-open-refresh.mjs`, and `test-notebook-navigator-presentation.mjs`, alongside the existing typing and note-opening suites. Validation and installed test-vault results are recorded in [release notes](release-notes/3.1.2.md). This patch reduces reproduced duplicate work; it does not assert that every command or every source of visual movement across all plugins is resolved. Production remains a separate user-controlled BRAT update.
+
+
+## 3.1.3 — Avoid repeated vault reads while logging food (2026-09-22)
+
+Native-record creation, including Health food logging, verifies record identities against Vault source bytes. Previously an ordinary note edit invalidated the whole source scan, and any edit during that scan restarted all reads. GCM now keeps an in-memory cache of relevant parsed frontmatter and verified non-record markers keyed by file, path, modification time and size. Unchanged ordinary notes do not repeat identity classification. Create/modify/delete/rename events and internal record writes invalidate affected entries; configuration changes discard the cache. Retries retain verified unchanged entries and reject results made uncertain by an intervening write. Note bodies are not retained in this cache.
+
+Duplicate identities, unreadable candidates, malformed identity evidence, stale migration previews and source-preserving writes retain their guards. No record, setting or API-version migration occurs. This is a backward-compatible performance patch; Health consumes it through GCM's existing nativeRecords API and does not require a new Health release. The first source verification after startup or configuration changes still reads the vault; subsequent checks still enumerate files, but read, parse and reconcile only invalidated paths (including paths touched by provisional metadata events). Food-provider network latency and legacy Daily Note logging are separate paths and are not changed here.
+
+Regression tests cover a 1,000-note scan interrupted by an edit, single-file rereads before food creation, internal edits followed by unrelated changes, rename/delete/replacement, and a duplicate appearing during a read. Structured performance diagnostics report source reads, passes, cache size and duration without note contents. Full tests, the separate final build/deployment, explicit test-vault reload, installed logging checks and artifact hashes are recorded in [release notes](release-notes/3.1.3.md). Minimum Obsidian remains 1.10.0. This release is for the user's BRAT pull; production installation and mobile acceptance remain separate.
+
+
+## 3.1.4 — Reduce startup record-indexing work (2026-09-22)
+
+Obsidian emits Vault create events for existing files during initial discovery. GCM still indexes those files immediately, but only files created after workspace layout readiness become eligible for native Base task-draft adoption. Startup no longer rereads existing notes, parses them as potential empty drafts, or starts one draft-eligibility timer per discovered file. Later metadata updates retain indexing without retroactively adopting discovered files. As of 3.6.12, new task drafts created after readiness, including after a hot plugin reload, are prepared only by the awaited created-note handoff, preserving the identity/exclusion guards. Metadata events never adopt them and no eligibility timer remains.
+
+Native-record inspection now prepares readable/identity-evidence profiles once per mapping configuration. Each inspection still checks the current frontmatter, conflicting identities and kind-specific keys. A value-based signature detects direct edits to nested aliases/key mappings and explicit migration-mode transitions; no settings save is needed to invalidate preparation. Returned profiles are independent copies, so API consumers cannot corrupt the prepared configuration. No note bodies or record results are cached by this change. Optional diagnostics report index rebuild counts and synchronous duration without note content.
+
+This is a backward-compatible performance patch with no new settings, defaults, API version or note migration. It optimizes GCM work consumed during indexing by Health and Navigator without requiring those plugins to change. The reload schedule remains as configured. Initial authoritative verification, per-note indexing, timer-session scanning, and UI rendering still have their own costs; this release does not claim to eliminate every source of startup or editing delay. Minimum Obsidian remains 1.10.0.
+
+Regression coverage includes 1,000 startup discovery events with zero draft reads/timers, indexing of existing records, late metadata after readiness, new draft creation, preparation reuse across 1,000 inspections and 1,000 index updates, mutable returned profiles, changed frontmatter, nested mapping/alias edits and migration-mode changes. Existing identity, conflict and migration suites remain required. Final validation: 1,214 full-suite checks and 139 additional checks passed (including 89 native-record checks); the separate build deployed to the test vault and GCM was explicitly reloaded. Across the same 8,794 metadata inputs, classification median fell from 610.9 ms on 3.1.3 to 571.3 ms with prepared inspection profiles, with identical output hashes. Extending preparation reuse to the index builder reduced its median from 1,579.6 ms in the intermediate candidate to 1,425.0 ms in the final candidate; records and conflict ownership were identical. These are synchronous desktop component samples, not end-to-end reload measurements. An installed post-reload task draft acquired its ID/title and canonical path correctly. The fixture was archived, temporary probes removed and persisted settings remained unchanged. Full measurements, reload verification and artifact hashes are recorded in [release notes](release-notes/3.1.4.md). Production installation remains a user-controlled BRAT pull.
+
+
+## 3.1.5 — Reduce pauses during everyday vault use (2026-09-22)
+
+Timer status and scheduled-time maintenance share in-flight session scans. Verified per-file session data, including absence of sessions, remains cached until a create/modify/delete/rename/metadata event, file path/stat change or timer-property change invalidates it. Only normalized timer data is retained, never note bodies or unrelated properties. Own timer writes explicitly invalidate their source even when metadata events are delayed. Reads that overlap changes are retried; transient read/YAML failures are not cached as absence. Archive and companion exclusions still apply. Callers receive independent records/arrays. The first scan still reads eligible notes; warm scans enumerate files but avoid rereading unchanged sources. Optional performance logs include scan counts, passes, cache size and duration.
+
+Linked-subitem rendering uses Obsidian's reported Markdown view mode before inspecting computed styles and geometry. Preview cleanup removes old decorations from all preview wrappers without measuring their visibility and leaves CodeMirror widgets untouched. The existing strict Source guard and compatible-view DOM fallback are retained; actual reading-mode decoration still chooses the visible preview wrapper. These changes remove confirmed forced-style-read points from note-opening refreshes without changing mode-transition scheduling.
+
+This is a backward-compatible patch with no new settings, defaults, migrations or API changes. Timer intervals and reload scheduling are unchanged. Regression coverage includes 1,000-file scan coalescing/negative caching, changed sources with stale metadata, own writes, imports/renames/deletes, same-path replacements, property changes, in-flight edits, error recovery, BOM/CRLF/end-marker parsing, and reported-mode/strict-source/compatibility fallbacks. Validation, installed measurements and SHA-256 hashes are recorded in [release notes](release-notes/3.1.5.md). Physical iPhone acceptance and production BRAT installation remain separate; these changes do not establish the cause of every typing or scrolling delay.
+
+Installed test-vault measurements: 3.1.4 timer scans took 1,203.2 / 788.3 / 753.6 ms across 8,796 notes. The final indexed path took 22.9 / 22.9 / 21.1 ms across approximately 8,800 notes with identical session results (34× faster by median); only three retryable source reads remained per warm scan. A forced cold scan still took 949.5 ms. Four normal editing-view opens made zero linked-subitem visibility-helper calls. These component measurements do not establish an overall opening/typing/scrolling speedup. The first installed candidate revealed an additional visibility read in cleanup; final cleanup also avoids layout measurement.
+
+Final validation: 1,217 full-suite checks and 148 additional checks passed, followed by the separate final build/test deployment and explicit GCM reload. Fresh Reading/Live Preview/Source openings passed their widget checks. The measured four-open sequence called the visibility helper zero times. Persisted GCM settings were preserved, fixtures archived, diagnostic probes removed and the original tab restored. A separate Source/Live Preview transition interaction remains unresolved; no mode-transition scheduling or decoration-retention changes are included in this patch.
+
+
+## 3.1.6 — Stable linked-item rendering (2026-09-22)
+
+Reading view retains unchanged linked-item row DOM across refreshes, preserving focus and avoiding repeated checkbox/pill creation. Changed rows are built off-DOM and replaced in one operation; removed rows restore native links. Incomplete preview mapping preserves mounted rows until a complete mapping can safely clean up. Reading view uses current preview text rather than a stale hidden editor. Fallback mapping matches actual link destinations in source/DOM order instead of section-relative line numbers and assigns each rendered host at most once, including repeated links. Native rerenders and removed widgets invalidate reuse.
+
+Reading view and Live Preview share a presentation signature covering title/alias, checkbox kind/state/icon, visual classes, property pills and action targets. The signature snapshots mutable file paths. Live Preview retains CodeMirror's mounted wrapper and replaces all changed child content and event handlers together; the former checkbox-only update left titles, pills and event targets stale. Unchanged widgets still reuse their DOM. The linked-row editor extension has highest precedence so native wikilink refreshes cannot cover its recognized ranges with blank replacements. Native list markers and checkbox editing remain in place.
+
+No saved settings, defaults, content migrations or public APIs change. This targets linked-item refresh work, not all Base/Markdown rendering or the separate Source/Live Preview transition issue recorded in 3.1.5. Regression coverage includes repeated unchanged refreshes, presentation changes, file renames, native rerenders, removed rows, nested rows, missing targets and duplicate-host fallback mapping. Full tests, final build/deployment, test-vault plugin reload and installed rendering checks are recorded in [release notes](release-notes/3.1.6.md). Physical iPhone validation remains separate.
+
+
+## 3.1.7 — Reduce first-use identity verification work (2026-09-23)
+
+The first Health food save after startup could still wait for every Markdown file to be read sequentially, even with the incremental cache introduced in 3.1.3. Authoritative identity verification now runs at most eight independent Vault reads concurrently. It retains the same complete source verification, changed-file invalidation, uncertain-read retries and duplicate/malformed-source guards. A failed read stops new work and waits for in-flight reads to settle before releasing the shared refresh, so a retry cannot race leftover workers. Reindexing an ordinary or valid record also stops walking every unrelated blocked identity; conflict cleanup runs only for a path that actually owned blocked evidence.
+
+This is a backward-compatible performance patch with no settings, defaults, frontmatter or API changes. The first verification still visits every file and slower storage can still delay it; it is not skipped or replaced with potentially stale metadata. Warm saves keep the existing incremental behavior. Focused tests verify concurrency, the eight-read ceiling, failure draining, no record on failed verification, safe retry and edits during parallel reads. Full suite, separate final build, targeted test-vault reload, installed food-save timings and artifact hashes are recorded in [release notes](release-notes/3.1.7.md). Minimum Obsidian remains 1.10.0; production installation remains the user's BRAT pull. The reported 30-second click delay has not been reproduced exactly, and these results do not establish its cause on the user's device.
+
+## 3.4.0 — Navigator visibility in Custom properties
+
+Navigator's Properties configuration button, section-menu action, and property-key settings action open GCM's Rules & fields → Custom fields destination. Tags, ADOLink, PR Link, all other existing definitions, and note frontmatter remain unchanged. This release adds controls; it does not apply the proposed taxonomy or remove Health fields.
+
+Each GCM property editor shows three Navigator toggles: navigation tree, populated note-list values, and file context menu. These edit only the active Navigator profile, whose name is shown beside the controls. Global Navigator section/list switches still govern their surfaces. Existing per-profile visibility and ordering remain authoritative; missing keys are added only when edited, with unrelated surfaces off. Existing catalog import behavior is unchanged. Removing a GCM definition does not erase Navigator preferences or note data. Navigator-only keys can be managed here by adding a matching GCM custom property.
+
+GCM 3.4.0 publishes `api.ui.openCustomPropertySettings(): boolean`; Navigator 6.5.0 publishes `api.propertyVisibility` v1 with `get(key)` and `set(key, surface, visible, expectedProfileId)`. The three surfaces are `showInNavigation`, `showInList`, and `showInFileMenu`. GCM hosts the controls; Navigator validates and persists its existing profile settings. There is no mirrored visibility configuration, migration, note writer, new watcher or background automation. Stale-profile edits fail before mutation. Failed saves restore in-memory visibility and surface the error.
+
+The handoff clears only transient property search/type filters and focuses the property search. No destination or nested disclosure is added: controls sit inside the existing single expanded property editor and reuse the responsive native Setting/toggle layout. Navigator retains its original configuration modal with missing/older GCM; GCM shows the required Navigator version when its adapter is unavailable. Upstream Notebook Navigator is never addressed.
+
+Validation: focused adapter tests cover existing values, profile isolation, casing/order, new keys, no-op writes, stale profiles, save failure and missing providers. The full suites, final builds and installed test-vault UI verification are recorded in this release's notes. This is a backward-compatible minor feature, ready for a BRAT pull after publication; production installation and physical iPhone acceptance are separate.
+
+Explicit all-off property entries now survive Navigator normalization and the standalone modal, so a later catalog refresh cannot re-enable a deliberately hidden key. Installed QA used Navigator’s Configure property keys action to open GCM, expanded Status, changed visibility using the native toggles, reloaded Navigator with every surface off, and confirmed the persisted all-off entry. Original test-profile keys were restored; GCM custom-property definitions were unchanged. No notes were created or modified. Controls reuse the existing responsive native settings layout; physical iPhone testing remains outstanding.
+
+All 1,240 declared-suite tests and 160 supplemental tests passed; TypeScript and the production build passed. Final artifacts were deployed only to Obsidian Plugin Test Vault and reloaded with the targeted plugin command. Release notes contain SHA-256 hashes.
+
+## 3.5.0 — Two-level frontmatter kinds
+
+GCM owns the configured record classifications. Its existing `nativeRecordKindPropertyKeys` map accepts either a key string (unchanged behavior) or `{key, value, parentKind}`, for example a food-entry record mapped to `{key: "transactionKind", value: "food-entry", parentKind: "transaction"}`. These mappings are opt-in; upgrading never changes notes or classification settings automatically. The additive `api.frontmatterKinds` v1 exposes encode/decode/definition for domain writers. Canonical record IDs and internal domain kinds remain stable while notes store the selected parent and subtype. Current mappings are authoritative; this adds no watcher, automatic repair, or startup migration.
+
+Health library-note creation uses that shared encoding; logged records continue through GCM's record writer. Finances uses it at its existing property read/write boundary for imports, manual entries, updates and generated Base filters, retaining its canonical internal finance types. Controller omits an unsolicited `status: scheduled`; explicit template statuses and cancellation statuses are preserved, and cancellation restoration can return status to absent. Calendar identity remains its stable ID while public kind/subkind fields belong to the note/template.
+
+The user's one-time taxonomy migration is separate from shipped plugin behavior. It must update settings, existing notes, templates, embedded/standalone Base filters and presentation/hide rules together, with conflict checks, source snapshots and preserved identifiers/bodies. Empty optional properties are not created by the classification mapping. GCM custom-property definitions govern the properties panel; removing specialized nutrition/finance definitions does not delete their stored data. Existing settings destinations, disclosures and mobile layouts are unchanged. Physical iPhone acceptance remains outstanding. Full test/build and test-vault verification results are recorded in release notes.
+
+Validation for 3.5.0 (2026-09-26): 1,240 main-suite checks and 164 supplemental checks passed; TypeScript and production build passed. The installed test-vault plugins were reloaded by manifest ID after refreshing manifests. Synthetic API creation/update checks verified food-entry parent/subtype encoding, stable IDs, calendar template classifications, preserved calendar body and absent status, plus finance encoding/decoding. Temporary in-memory classification/root settings were restored without saving, and fixtures moved directly from Inbox to `_archive/Taxonomy QA 2026-09-26`. No external provider was called. Focused finance tests additionally cover investment round trips and dotted Base expressions with renamed keys. Final separate build/deployment and artifact hashes are recorded in the release notes.
+
+
+## 3.5.1 — Reuse resolved record property mappings
+
+Native-record inspection and Navigator presentation now reuse the existing settings-signature cache for storage profiles, kind mappings, and identity-evidence profiles. Previously each presentation rebuilt all profiles, and each kind lookup resolved all kind mappings again. The prepared configuration is rebuilt only when its actual values or migration-read mode change, including nested in-place edits before a settings save. Public profiles and nested classifications remain detached copies. Identity ambiguity, migration protection, note content and rule behavior are unchanged. No setting, watcher, background repair, migration, or new persisted cache is added.
+
+The focused regressions cover repeated reads across 26 mappings, nested mutation isolation, immediate settings invalidation, and existing identity/alias/migration semantics. Validation requires `npm run prepretest`, `npm test`, and a separate `npm run build`, test-vault deployment and targeted reload. Installed before/after measurements use the same 1,466 synthetic inspections and protected-property lookups with temporary in-memory configuration restored immediately afterward; no production settings or notes are copied. Results and artifact hashes are in release notes. Minimum Obsidian remains 1.10.0; this backward-compatible performance fix is a patch release. Physical iPhone timing and production BRAT installation are separate.
+
+Installed test-vault validation on 2026-09-26: 1,466 synthetic inspections with 26 two-level kind mappings fell from 622.2 ms to 245.1 ms; 1,466 Navigator protected-property lookups fell from 7,638.4 ms to 26.6 ms. These are one desktop before/after sample, not an overall/device guarantee. All 1,240 declared-suite tests plus 165 supplemental tests passed; TypeScript and the separate production build passed. The targeted plugin reload loaded 3.5.1. Benchmark configuration was restored immediately and runtime `data.json` remained byte-identical. No production artifacts or settings were changed.
+
+
+## 3.5.2 — Select the title when its editor opens
+
+Clicking a note's inline title opens Edit Title with the entire existing title selected, so typing replaces it immediately. Selection happens once in the modal's existing initial-focus callback. Clicking within the field afterward can place the caret normally. Save, Enter, Cancel, validation and title/filename ownership retain their existing behavior. Other text-property dialogs retain their existing focus behavior; selection is an explicit internal modal option, not a user setting. Closed dialogs cannot receive delayed focus.
+
+Validation uses the existing text-input/tag and title suites, full `npm test`, supplemental `npm run prepretest`, a separate final build/test deployment, targeted reload and installed title-dialog interaction checks. Results and artifact hashes are in release notes. Minimum Obsidian remains 1.10.0; this is a backward-compatible patch. Physical iPhone acceptance and production BRAT installation remain separate.
+
+Installed desktop QA on 2026-09-26 confirmed that Edit Title opens with focus and selection spanning all 18 characters of the synthetic title. Keyboard typing replaced the complete value; Escape preserved the original note; reopening, typing and Enter saved the replacement through the existing title writer. The fixture was archived directly. All 1,240 declared-suite tests and 165 supplemental tests passed; the final separate build deployed to the test vault and targeted reload loaded 3.5.2.
+
+## 3.6.0 — Configurable record tags
+
+GCM record classification mappings now also accept `{tag: "kind/food/transaction"}`. The complete tag is an exact, case-insensitive identifier; its depth and words have no structural meaning. Ordinary tags are preserved. Native creation, updates and re-identification store the tag without a kind property while API consumers still receive the internal record type. Conflicting type tags fail closed. Calendar canonical identity remains independent of public template tags. Daily Note recognition uses the configured mapping, including cache invalidation when a mapping changes. Existing property mappings and unmapped records retain their prior behavior; no startup migration or repair is added.
+
+Rules & fields → Custom fields shows a compact Record tags selector and tag editor when tag mappings exist. Apply uses the existing confirmed property migration for exact frontmatter tag values, updates matching GCM mappings, field scopes and presentation rules, and preserves note bodies. Base formulas and other plugins’ tag references still require review. No new settings destination or disclosure is added; the existing responsive Setting layout is retained. Tag mappings are persisted in the existing nativeRecordKindPropertyKeys setting. One-time conversion of properties/templates/filters is a separate reviewed operation. Production installation and physical iPhone acceptance are not claimed.
+
+Validation: focused tag round trips and creation/update tests, full declared tests, a separate final build, test-vault deployment and targeted reload are required. Final results and artifact hashes are recorded in release notes.
+
+Installed test-vault validation on 2026-09-26: 1,242 declared-suite tests and 171 supplemental tests passed; TypeScript and final build/deployment passed. A targeted reload loaded 3.6.0. A synthetic food record was created and updated with only the configured type tag, preserving its identity and unrelated tag. The Record tags selector and displayed full path were checked in the test-vault settings UI. Temporary settings were restored without saving, data.json stayed byte-identical during the probe, and the fixture was moved directly from Inbox to _archive. No production artifacts or notes were changed.
+
+<!-- Startup implementation verification: 2026-10-08 -->
+
+Installed foreground interaction QA also clicked Navigator New note in a unique Inbox scope, opened the created item through normal Navigator selection, typed with the native keyboard and saved. Exactly one note was created; the visible body and saved source contained the typed marker. The trace counted 16 raw reads, 31 cached reads, one inventory, two process attempts and one modify across setup/creation/navigation/input inspection. The original leaf/query were restored and the owned fixture was archived byte-identically. This is a correctness check, not first-input latency or a controlled navigation benchmark.
+
+Final post-documentation verification: the separate ordinary production build passed, reported `target=test` with unchanged runtime bytes, and retained the already-loaded and QA-verified numeric version. Public release artifacts must match the SHA-256 receipt above. Production installation, full quit/reopen and vault-close/reopen comparisons, single-versus-two-window production profiling, first-use input latency and physical mobile acceptance remain rollout verification gates.

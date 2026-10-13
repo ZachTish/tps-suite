@@ -1,0 +1,10 @@
+{
+  "id": "tps-finances",
+  "name": "TPS Finances",
+  "version": "5.0.0",
+  "minAppVersion": "1.12.0",
+  "description": "Accounts, transactions, and investments as atomic notes for TPS.",
+  "author": "Zach Tisherman",
+  "authorUrl": "https://github.com/StartAutomating",
+  "isDesktopOnly": false
+}

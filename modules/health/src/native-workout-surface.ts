@@ -1,0 +1,626 @@
+import type {
+  NativeWorkoutExerciseSnapshot,
+  NativeWorkoutSetPatch,
+  NativeWorkoutSetSnapshot,
+  NativeWorkoutSnapshot,
+} from './native-records';
+import type { RestTimerMode } from './types';
+
+export interface NativeWorkoutSetDraft {
+  reps?: number;
+  weight?: number;
+  weightUnit: string;
+  perArm: boolean;
+  rpe?: number;
+  restSeconds?: number;
+  setType: string;
+}
+
+export interface NativeWorkoutSurfaceActions {
+  addExercise(): void;
+  addSet(exercise: NativeWorkoutExerciseSnapshot): void | Promise<void>;
+  updateSet(exercise: NativeWorkoutExerciseSnapshot, set: NativeWorkoutSetSnapshot, patch: NativeWorkoutSetPatch): void | Promise<void>;
+  openExerciseMenu(exercise: NativeWorkoutExerciseSnapshot, event: MouseEvent): void;
+  openSetMenu(exercise: NativeWorkoutExerciseSnapshot, set: NativeWorkoutSetSnapshot, event: MouseEvent): void;
+  finish(): void | Promise<void>;
+}
+
+export interface NativeWorkoutSurfaceOptions {
+  active: boolean;
+  elapsedLabel: string;
+  instanceKey: string;
+  defaultRestSeconds: number;
+  restTimerMode: RestTimerMode;
+  showSessionActions: boolean;
+  actions: NativeWorkoutSurfaceActions;
+}
+
+const text = (tag: keyof HTMLElementTagNameMap, value: string, className = ''): HTMLElement => {
+  const element = document.createElement(tag);
+  if (className) element.className = className;
+  element.textContent = value;
+  return element;
+};
+
+const button = (label: string, title: string, handler: (event: MouseEvent) => void | Promise<void>, disabled = false): HTMLButtonElement => {
+  const element = document.createElement('button');
+  element.type = 'button';
+  element.className = 'tps-health-native-workout-button';
+  element.textContent = label;
+  element.setAttribute('aria-label', title);
+  element.setAttribute('title', title);
+  element.disabled = disabled;
+  element.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!element.disabled) void handler(event);
+  });
+  return element;
+};
+
+const formatNumber = (value: number): string => Number.isFinite(value)
+  ? String(Math.round(value * 100) / 100)
+  : '0';
+
+const formatRest = (seconds: number | undefined): string => {
+  if (seconds == null) return '—';
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return minutes ? `${minutes}:${String(remainder).padStart(2, '0')}` : `${remainder}s`;
+};
+
+const stopInteraction = (element: HTMLElement): void => {
+  for (const eventName of ['click', 'pointerdown', 'mousedown']) {
+    element.addEventListener(eventName, (event) => event.stopPropagation());
+  }
+};
+
+const numberInput = (
+  value: number | undefined,
+  label: string,
+  options: { min?: number; max?: number; step?: string; integer?: boolean } = {},
+): HTMLInputElement => {
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.className = 'tps-health-native-workout-input';
+  input.value = value == null ? '' : formatNumber(value);
+  input.placeholder = '—';
+  input.setAttribute('aria-label', label);
+  input.setAttribute('inputmode', options.integer ? 'numeric' : 'decimal');
+  if (options.min != null) input.min = String(options.min);
+  if (options.max != null) input.max = String(options.max);
+  input.step = options.step || (options.integer ? '1' : 'any');
+  stopInteraction(input);
+  return input;
+};
+
+const selectInput = (value: string, label: string, choices: Array<[string, string]>): HTMLSelectElement => {
+  const select = document.createElement('select');
+  select.className = 'tps-health-native-workout-select';
+  select.setAttribute('aria-label', label);
+  for (const [optionValue, optionLabel] of choices) {
+    const option = document.createElement('option');
+    option.value = optionValue;
+    option.textContent = optionLabel;
+    select.append(option);
+  }
+  select.value = value;
+  stopInteraction(select);
+  return select;
+};
+
+const parsedNumber = (input: HTMLInputElement): number | undefined => {
+  const value = input.value.trim();
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+// Invalid/unfinished numeric text must reach the validator, never become zero
+// or an intentional clear. Empty optional inputs alone mean "clear".
+export const nativeWorkoutEditedNumber = (input: Pick<HTMLInputElement, 'value' | 'validity'>, optional = false): number | null => {
+  if (input.validity.badInput) return NaN;
+  const value = input.value.trim();
+  return value ? Number(value) : optional ? null : NaN;
+};
+
+const setTypeOptions: Array<[string, string]> = [
+  ['normal', 'Normal'],
+  ['warmup', 'Warmup'],
+  ['drop', 'Drop'],
+  ['failure', 'Failure'],
+];
+
+type WorkoutEditControl = HTMLInputElement | HTMLSelectElement;
+// These are the models owned by mounted controls, not a vault data cache.
+// Stable references keep their event handlers current without replacing inputs.
+const mountedWorkoutModels = new WeakMap<HTMLElement, { snapshot: NativeWorkoutSnapshot; options: NativeWorkoutSurfaceOptions }>();
+const pendingWorkoutRenders = new WeakMap<HTMLElement, { snapshot: NativeWorkoutSnapshot; options: NativeWorkoutSurfaceOptions }>();
+const editValue = (control: WorkoutEditControl): string => control.type === 'checkbox'
+  ? String((control as HTMLInputElement).checked) : control.value;
+const flushPendingWorkoutRender = (root: HTMLElement): void => {
+  const pending = pendingWorkoutRenders.get(root);
+  if (pending && root.isConnected) renderNativeWorkoutSurface(root, pending.snapshot, pending.options);
+};
+const registerWorkoutEdit = (root: HTMLElement, control: WorkoutEditControl, setId: string, field: string): void => {
+  control.classList.add('tps-health-native-workout-edit-control');
+  control.dataset.setId = setId;
+  control.dataset.field = field;
+  control.dataset.savedValue = editValue(control);
+  // Reverting an edit can reveal the latest deferred snapshot. Focus/blur alone
+  // must never replace unfinished browser numeric text (badInput has no raw value).
+  control.addEventListener('input', () => flushPendingWorkoutRender(root));
+};
+const hasUncommittedWorkoutEdit = (root: HTMLElement, snapshot: NativeWorkoutSnapshot): boolean => {
+  const sets = new Map(snapshot.exercises.flatMap(exercise => exercise.sets.map(set => [set.id, set] as const)));
+  return Array.from(root.querySelectorAll<WorkoutEditControl>('.tps-health-native-workout-edit-control')).some(control => {
+    const set = sets.get(control.dataset.setId || '');
+    if (!set) return false;
+    if ((control as HTMLInputElement).validity?.badInput) return true;
+    const value = editValue(control);
+    if (value === control.dataset.savedValue) return false;
+    if (document.activeElement === control && !control.disabled) return true;
+    const stored = set[control.dataset.field as keyof NativeWorkoutSetSnapshot];
+    const incoming = stored == null ? '' : typeof stored === 'number' ? formatNumber(stored) : String(stored);
+    return value !== incoming;
+  });
+};
+
+interface WorkoutRestTimingOwner {
+  signature: string;
+  interval?: number;
+}
+// Only the visible clock's lifecycle is retained. Its values come from each
+// authoritative snapshot; ticks never inspect records or write workout data.
+const workoutRestTimingOwners = new WeakMap<HTMLElement, WorkoutRestTimingOwner>();
+const stopWorkoutRestTiming = (root: HTMLElement): void => {
+  const owner = workoutRestTimingOwners.get(root);
+  if (owner?.interval !== undefined) window.clearInterval(owner.interval);
+  workoutRestTimingOwners.delete(root);
+};
+export const disposeNativeWorkoutSurface = (root: HTMLElement): void => {
+  stopWorkoutRestTiming(root);
+  pendingWorkoutRenders.delete(root);
+  mountedWorkoutModels.delete(root);
+  root.remove();
+};
+const restTimingElement = (setId: string): HTMLElement => {
+  const label = text('span', '', 'tps-health-native-workout-rest-countdown');
+  label.dataset.setId = setId;
+  label.toggleAttribute('hidden', true);
+  return label;
+};
+const syncWorkoutRestTiming = (
+  root: HTMLElement,
+  snapshot: NativeWorkoutSnapshot,
+  options: NativeWorkoutSurfaceOptions,
+  signature: string,
+): void => {
+  if (workoutRestTimingOwners.get(root)?.signature === signature) return;
+  stopWorkoutRestTiming(root);
+  const owner: WorkoutRestTimingOwner = { signature };
+  workoutRestTimingOwners.set(root, owner);
+  const completed = snapshot.exercises.flatMap(exercise => exercise.sets)
+    .map(set => ({ id: set.id, started: Date.parse(set.completedDate), restSeconds: set.restSeconds }))
+    .filter(set => Number.isFinite(set.started))
+    .sort((left, right) => left.started - right.started || (left.id < right.id ? -1 : left.id > right.id ? 1 : 0));
+  const ended = Date.parse(snapshot.endedAt);
+  const timings = new Map(completed.map((set, index) => {
+    const next = completed[index + 1];
+    const live = !next && snapshot.status === 'active';
+    const stopped = next?.started ?? (!live && Number.isFinite(ended) && ended >= set.started ? ended : undefined);
+    return [set.id, { ...set, live, stopped }] as const;
+  }));
+  const now = Date.now();
+  for (const label of Array.from(root.querySelectorAll<HTMLElement>('.tps-health-native-workout-rest-countdown'))) {
+    const timing = timings.get(label.dataset.setId || '');
+    const restInput = label.parentElement?.querySelector<HTMLInputElement>('.tps-health-native-workout-input');
+    const update = (at: number): void => {
+      let value = '';
+      if (timing && (timing.live || timing.stopped !== undefined)) {
+        const seconds = Math.max(0, Math.floor(((timing.stopped ?? at) - timing.started) / 1000));
+        if (options.restTimerMode === 'count-down') {
+          const restDraft = restInput && editValue(restInput) !== restInput.dataset.savedValue;
+          const target = Math.max(0, Math.round((restDraft ? parsedNumber(restInput) : timing.restSeconds) ?? options.defaultRestSeconds));
+          const remaining = Math.max(0, target - seconds);
+          value = remaining > 0 ? formatRest(remaining) : 'ready';
+        } else value = formatRest(seconds);
+      }
+      if (label.textContent !== value) label.textContent = value;
+      label.toggleAttribute('hidden', !value);
+      label.classList.toggle('is-ready', value === 'ready');
+      label.setAttribute('aria-label', options.restTimerMode === 'count-down' ? 'Rest remaining' : 'Rest elapsed');
+    };
+    update(now);
+    if (timing?.live && owner.interval === undefined) {
+      owner.interval = window.setInterval(() => {
+        if (workoutRestTimingOwners.get(root) !== owner) return;
+        if (!root.isConnected || !label.isConnected) {
+          stopWorkoutRestTiming(root);
+          return;
+        }
+        update(Date.now());
+      }, 1000);
+    }
+  }
+};
+
+export function renderNativeWorkoutSurface(
+  root: HTMLElement,
+  snapshot: NativeWorkoutSnapshot,
+  options: NativeWorkoutSurfaceOptions,
+): void {
+  const signature = JSON.stringify({
+    instance: options.instanceKey,
+    active: options.active,
+    id: snapshot.id,
+    path: snapshot.path,
+    status: snapshot.status,
+    endedAt: snapshot.endedAt,
+    showSessionActions: options.showSessionActions,
+    exercises: snapshot.exercises.map((exercise) => [
+      exercise.id,
+      exercise.path,
+      exercise.name,
+      exercise.totalReps,
+      exercise.totalVolume,
+      exercise.supersetGroupId,
+      exercise.sets.map((set) => [set.id, set.ordinal, set.reps, set.weight, set.weightUnit, set.perArm, set.rpe, set.restSeconds, set.setType, set.dropSetGroupId, set.completedDate, set.restStartedAt]),
+    ]),
+    defaultRestSeconds: options.defaultRestSeconds,
+    restTimerMode: options.restTimerMode,
+  });
+  const summary = `${snapshot.status === 'complete' ? 'Complete' : options.elapsedLabel} · ${snapshot.setCount} ${snapshot.setCount === 1 ? 'set' : 'sets'} · ${snapshot.exerciseCount} ${snapshot.exerciseCount === 1 ? 'exercise' : 'exercises'}`;
+  if (root.dataset.renderKey === signature) {
+    // This is the latest authoritative snapshot too, even when only its clock
+    // changed. A deferred different snapshot must not reappear after an edit.
+    pendingWorkoutRenders.delete(root);
+    root.querySelector<HTMLElement>('.tps-health-native-workout-pending-refresh')?.remove();
+    // A clock-only refresh must not replace a focused input or its draft text.
+    const summaryElement = root.querySelector<HTMLElement>('.tps-health-native-workout-summary');
+    if (summaryElement) summaryElement.textContent = summary;
+    syncWorkoutRestTiming(root, snapshot, options, signature);
+    return;
+  }
+  if (options.active && snapshot.status === 'active' && root.dataset.workoutId === snapshot.id
+    && root.dataset.workoutPath === snapshot.path && root.dataset.instanceKey === options.instanceKey) {
+    // A removed exercise owns no editable draft. Show its removal immediately
+    // while the existing deferred render still protects edits on retained sets.
+    const exerciseIds = new Set(snapshot.exercises.map(exercise => exercise.id));
+    for (const card of Array.from(root.querySelectorAll<HTMLElement>('.tps-health-native-workout-exercise'))) {
+      const exerciseId = card.dataset.exerciseId;
+      if (exerciseId && !exerciseIds.has(exerciseId)) card.remove();
+    }
+    if (hasUncommittedWorkoutEdit(root, snapshot)) {
+      // Timing belongs to the latest saved completion even while unrelated
+      // unfinished inputs keep their existing controls and deferred snapshot.
+      syncWorkoutRestTiming(root, snapshot, options, signature);
+      pendingWorkoutRenders.set(root, { snapshot, options });
+      const summaryElement = root.querySelector<HTMLElement>('.tps-health-native-workout-summary');
+      if (summaryElement) summaryElement.textContent = summary;
+      let waiting = root.querySelector<HTMLElement>('.tps-health-native-workout-pending-refresh');
+      if (!waiting) {
+        waiting = text('p', '', 'tps-health-native-workout-pending-refresh');
+        waiting.setAttribute('role', 'status');
+        root.append(waiting);
+      }
+      waiting.textContent = 'New workout values are waiting. Save or revert your edit to show them.';
+      return;
+    }
+  }
+  const previous = mountedWorkoutModels.get(root);
+  const reuse = previous && previous.snapshot.id === snapshot.id && previous.snapshot.path === snapshot.path
+    && previous.options.instanceKey === options.instanceKey && previous.options.active === options.active
+    && previous.options.showSessionActions === options.showSessionActions;
+  const oldExercises = new Map(reuse ? previous.snapshot.exercises.map(exercise => [exercise.id, exercise] as const) : []);
+  snapshot = { ...snapshot, exercises: snapshot.exercises.map(incoming => {
+    const exercise = oldExercises.get(incoming.id);
+    const oldSets = new Map(exercise?.sets.map(set => [set.id, set] as const) || []);
+    const sets = incoming.sets.map(value => {
+      const set = oldSets.get(value.id);
+      if (!set) return { ...value };
+      // Remove optional values that were explicitly cleared in the new snapshot.
+      for (const key of Object.keys(set)) if (!(key in value)) delete (set as any)[key];
+      return Object.assign(set, value);
+    });
+    return exercise ? Object.assign(exercise, incoming, { sets }) : { ...incoming, sets };
+  }) };
+  options = reuse ? Object.assign(previous.options, options) : { ...options };
+  mountedWorkoutModels.set(root, { snapshot, options });
+  pendingWorkoutRenders.delete(root);
+  root.dataset.renderKey = signature;
+  root.dataset.instanceKey = options.instanceKey;
+  root.dataset.workoutId = snapshot.id;
+  root.dataset.workoutPath = snapshot.path;
+  root.className = 'tps-health-native-workout-surface';
+  stopWorkoutRestTiming(root);
+  root.querySelector<HTMLElement>('.tps-health-native-workout-pending-refresh')?.remove();
+  if (!reuse) root.empty();
+
+  if (!reuse) {
+    const header = document.createElement('header');
+    header.className = 'tps-health-native-workout-header';
+    const identity = document.createElement('div');
+    identity.className = 'tps-health-native-workout-identity';
+    identity.append(
+      text('h3', 'Workout', 'tps-health-native-workout-heading'),
+      text(
+        'p',
+        summary,
+        'tps-health-native-workout-summary',
+      ),
+    );
+    header.append(identity);
+    if (options.showSessionActions) {
+      const actions = document.createElement('div');
+      actions.className = 'tps-health-native-workout-actions';
+      actions.append(
+        button('+ Exercise', 'Add exercise', options.actions.addExercise, !options.active),
+        button('Finish', 'Finish active workout', options.actions.finish, !options.active),
+      );
+      actions.lastElementChild?.classList.add('is-primary');
+      header.append(actions);
+    }
+    root.append(header);
+  } else {
+    const label = root.querySelector<HTMLElement>('.tps-health-native-workout-summary');
+    if (label) label.textContent = summary;
+  }
+
+  if (!snapshot.exercises.length) {
+    root.querySelector<HTMLElement>('.tps-health-native-workout-exercises')?.remove();
+    if (root.querySelector('.tps-health-native-workout-empty')) return;
+    const empty = document.createElement('div');
+    empty.className = 'tps-health-native-workout-empty';
+    empty.append(text('span', options.active ? 'No exercises yet. Add one to log your first set.' : 'No exercises were logged.'));
+    if (options.showSessionActions) {
+      empty.append(button('+ Exercise', 'Add first exercise', options.actions.addExercise, !options.active));
+    }
+    root.append(empty);
+    return;
+  }
+
+  root.querySelector<HTMLElement>('.tps-health-native-workout-empty')?.remove();
+  const exerciseList = root.querySelector<HTMLElement>('.tps-health-native-workout-exercises') || document.createElement('div');
+  exerciseList.className = 'tps-health-native-workout-exercises';
+  for (const exercise of snapshot.exercises) {
+    let group = Array.from(exerciseList.children).find(child => (child as HTMLElement).dataset.exerciseId === exercise.id) as HTMLElement | undefined;
+    const presentation = JSON.stringify([exercise.name, exercise.supersetGroupId]);
+    if (group && group.dataset.presentation !== presentation) { group.remove(); group = undefined; }
+    const freshGroup = !group;
+    if (!group) group = document.createElement('section');
+    group.dataset.presentation = presentation;
+    if (freshGroup) {
+      group.className = `tps-health-native-workout-exercise${exercise.supersetGroupId ? ' is-superset' : ''}`;
+      group.dataset.exerciseId = exercise.id;
+      if (exercise.supersetGroupId) group.dataset.supersetGroup = exercise.supersetGroupId;
+      const exerciseHeader = document.createElement('header');
+      exerciseHeader.className = 'tps-health-native-workout-exercise-header';
+      const exerciseIdentity = document.createElement('div');
+      exerciseIdentity.className = 'tps-health-native-workout-exercise-identity';
+      exerciseIdentity.append(
+        text('h4', exercise.name, 'tps-health-native-workout-exercise-name'),
+        text(
+          'span',
+          `${exercise.sets.length} ${exercise.sets.length === 1 ? 'set' : 'sets'} · ${formatNumber(exercise.totalReps)} reps · ${formatNumber(exercise.totalVolume)} volume`,
+          'tps-health-native-workout-exercise-total',
+        ),
+      );
+      if (exercise.supersetGroupId) {
+        exerciseIdentity.append(text('span', `Super ${exercise.supersetGroupId}`, 'tps-health-native-workout-group-badge is-superset'));
+      }
+      const exerciseActions = document.createElement('div');
+      exerciseActions.className = 'tps-health-native-workout-exercise-actions';
+      const more = button('⋯', `${exercise.name} actions`, (event) => options.actions.openExerciseMenu(exercise, event), !options.active);
+      more.classList.add('is-menu');
+      exerciseActions.append(
+        button('+ Set', `Add another ${exercise.name} set`, () => options.actions.addSet(exercise), !options.active),
+        more,
+      );
+      exerciseHeader.append(
+        exerciseIdentity,
+        exerciseActions,
+      );
+      group.append(exerciseHeader);
+    }
+    const total = group.querySelector<HTMLElement>('.tps-health-native-workout-exercise-total');
+    if (total) total.textContent = `${exercise.sets.length} ${exercise.sets.length === 1 ? 'set' : 'sets'} · ${formatNumber(exercise.totalReps)} reps · ${formatNumber(exercise.totalVolume)} volume`;
+    const table = group.querySelector<HTMLElement>('.tps-health-native-workout-table') || document.createElement('div');
+    table.className = 'tps-health-native-workout-table';
+    table.setAttribute('role', 'table');
+    table.setAttribute('aria-label', `${exercise.name} sets`);
+    if (!table.children.length) {
+    const tableHeader = document.createElement('div');
+    tableHeader.className = 'tps-health-native-workout-row is-header';
+    tableHeader.setAttribute('role', 'row');
+    for (const label of ['Set', 'Reps', 'Weight', 'RPE', 'Rest', 'Type', 'Done']) {
+      const cell = text('span', label);
+      cell.setAttribute('role', 'columnheader');
+      tableHeader.append(cell);
+    }
+    table.append(tableHeader);
+    }
+    const dropGroups = Array.from(new Set(exercise.sets.map(set => set.dropSetGroupId).filter(Boolean)));
+    for (const [setIndex, set] of exercise.sets.entries()) {
+      const retained = Array.from(table.children).find(child => (child as HTMLElement).dataset.setId === set.id) as HTMLElement | undefined;
+      const rowPresentation = JSON.stringify([set.ordinal, set.dropSetGroupId, exercise.sets[setIndex - 1]?.dropSetGroupId, exercise.sets[setIndex + 1]?.dropSetGroupId]);
+      if (retained && options.active && retained.dataset.presentation === rowPresentation) {
+        for (const control of Array.from(retained.querySelectorAll<WorkoutEditControl>('.tps-health-native-workout-edit-control'))) {
+          const value = set[control.dataset.field as keyof NativeWorkoutSetSnapshot];
+          const incoming = value == null ? '' : typeof value === 'number' ? formatNumber(value) : String(value);
+          if (control.type === 'checkbox') (control as HTMLInputElement).checked = Boolean(value);
+          else if (control.value !== incoming) control.value = incoming;
+          control.dataset.savedValue = incoming;
+        }
+        const complete = retained.querySelector<HTMLElement>('.is-complete-toggle');
+        if (complete) {
+          complete.textContent = set.completedDate ? 'Done ✓' : 'Complete';
+          complete.setAttribute('aria-pressed', set.completedDate ? 'true' : 'false');
+          complete.setAttribute('aria-label', set.completedDate ? `Mark ${exercise.name} set ${set.ordinal} incomplete` : `Complete ${exercise.name} set ${set.ordinal}`);
+        }
+        continue;
+      }
+      retained?.remove();
+      const row = document.createElement('div');
+      row.dataset.presentation = rowPresentation;
+      row.className = `tps-health-native-workout-row${set.dropSetGroupId ? ' is-drop-set' : ''}`;
+      row.setAttribute('role', 'row');
+      row.dataset.setId = set.id;
+      if (set.dropSetGroupId) {
+        row.dataset.dropSetGroup = set.dropSetGroupId;
+        const number = dropGroups.indexOf(set.dropSetGroupId) + 1;
+        row.dataset.dropSetNumber = String(number);
+        row.classList.toggle('is-drop-start', exercise.sets[setIndex - 1]?.dropSetGroupId !== set.dropSetGroupId);
+        row.classList.toggle('is-drop-end', exercise.sets[setIndex + 1]?.dropSetGroupId !== set.dropSetGroupId);
+        row.classList.toggle('is-drop-alternate', number % 2 === 0);
+        row.setAttribute('aria-label', `Drop set group ${number}, set ${set.ordinal}`);
+      }
+      const ordinal = text('span', String(set.ordinal), 'tps-health-native-workout-ordinal');
+      if (set.dropSetGroupId) {
+        ordinal.append(text('span', `D${dropGroups.indexOf(set.dropSetGroupId) + 1}`, 'tps-health-native-drop-label'));
+      }
+      ordinal.setAttribute('role', 'cell');
+      row.append(ordinal);
+      if (!options.active) {
+        const values = [
+          formatNumber(set.reps),
+          `${formatNumber(set.weight)} ${set.weightUnit}${set.perArm ? '/arm' : ''}`,
+          set.rpe == null ? '—' : formatNumber(set.rpe),
+          formatRest(set.restSeconds),
+          set.setType === 'normal' ? 'Normal' : set.setType.charAt(0).toUpperCase() + set.setType.slice(1),
+          set.completedDate ? '✓' : '—',
+        ];
+        for (const [index, value] of values.entries()) {
+          const cell = text('span', value);
+          cell.setAttribute('role', 'cell');
+          if (index === 3) {
+            cell.className = 'tps-health-native-workout-rest-cell';
+            cell.append(restTimingElement(set.id));
+          }
+          row.append(cell);
+        }
+        table.append(row);
+        continue;
+      }
+
+      const status = text('span', '', 'tps-health-native-workout-save-state');
+      status.setAttribute('role', 'status');
+      const commit = async (control: HTMLInputElement | HTMLSelectElement, patch: NativeWorkoutSetPatch): Promise<void> => {
+        const submittedValue = editValue(control);
+        // A snapshot captured before this save cannot be replayed after it.
+        pendingWorkoutRenders.delete(root);
+        // Disabling a field during its change/blur event cancels native Tab focus.
+        control.setAttribute('aria-busy', 'true');
+        status.textContent = 'Saving…';
+        try {
+          await options.actions.updateSet(exercise, set, patch);
+          control.dataset.savedValue = submittedValue;
+          status.textContent = 'Saved';
+        } catch {
+          status.textContent = 'Retry';
+        } finally {
+          control.setAttribute('aria-busy', 'false');
+          flushPendingWorkoutRender(root);
+        }
+      };
+      const reps = numberInput(set.reps, `${exercise.name} set ${set.ordinal} reps`, { min: 0, step: '1', integer: true });
+      registerWorkoutEdit(root, reps, set.id, 'reps');
+      reps.addEventListener('change', () => void commit(reps, { reps: nativeWorkoutEditedNumber(reps) as number }));
+      row.append(reps);
+
+      const weightCell = document.createElement('div');
+      weightCell.className = 'tps-health-native-workout-weight-cell';
+      weightCell.setAttribute('role', 'cell');
+      const weight = numberInput(set.weight, `${exercise.name} set ${set.ordinal} weight`, { min: 0 });
+      const unitChoices: Array<[string, string]> = [['lb', 'lb'], ['kg', 'kg']];
+      if (!unitChoices.some(([unit]) => unit === set.weightUnit)) unitChoices.unshift([set.weightUnit, set.weightUnit]);
+      const unit = selectInput(set.weightUnit, `${exercise.name} set ${set.ordinal} weight unit`, unitChoices);
+      const perArm = document.createElement('label');
+      perArm.className = 'tps-health-native-workout-per-arm';
+      perArm.setAttribute('title', 'Weight is per arm');
+      const perArmToggle = document.createElement('input');
+      perArmToggle.type = 'checkbox';
+      perArmToggle.checked = set.perArm;
+      registerWorkoutEdit(root, weight, set.id, 'weight');
+      registerWorkoutEdit(root, unit, set.id, 'weightUnit');
+      registerWorkoutEdit(root, perArmToggle, set.id, 'perArm');
+      perArmToggle.setAttribute('aria-label', `${exercise.name} set ${set.ordinal} weight is per arm`);
+      perArm.append(perArmToggle, text('span', '×2'));
+      stopInteraction(perArm);
+      weight.addEventListener('change', () => void commit(weight, { weight: nativeWorkoutEditedNumber(weight) as number }));
+      unit.addEventListener('change', () => void commit(unit, { weightUnit: unit.value }));
+      perArmToggle.addEventListener('change', () => void commit(perArmToggle, { perArm: perArmToggle.checked }));
+      weightCell.append(weight, unit, perArm);
+      row.append(weightCell);
+
+      const rpe = numberInput(set.rpe, `${exercise.name} set ${set.ordinal} RPE`, { min: 0, max: 10, step: '0.5' });
+      registerWorkoutEdit(root, rpe, set.id, 'rpe');
+      rpe.addEventListener('change', () => void commit(rpe, { rpe: nativeWorkoutEditedNumber(rpe, true) }));
+      row.append(rpe);
+      const restCell = document.createElement('div');
+      restCell.className = 'tps-health-native-workout-rest-cell';
+      restCell.setAttribute('role', 'cell');
+      const rest = numberInput(set.restSeconds, `${exercise.name} set ${set.ordinal} rest seconds`, { min: 0, step: '1', integer: true });
+      registerWorkoutEdit(root, rest, set.id, 'restSeconds');
+      rest.addEventListener('change', () => void commit(rest, { restSeconds: nativeWorkoutEditedNumber(rest, true) }));
+      restCell.append(rest, restTimingElement(set.id));
+      row.append(restCell);
+      const setType = selectInput(set.setType, `${exercise.name} set ${set.ordinal} type`, setTypeOptions);
+      registerWorkoutEdit(root, setType, set.id, 'setType');
+      setType.addEventListener('change', () => void commit(setType, { setType: setType.value }));
+      const rowActions = document.createElement('div');
+      rowActions.className = 'tps-health-native-workout-row-actions';
+      rowActions.setAttribute('role', 'cell');
+      const priorCompleted = Boolean(set.completedDate);
+      const completed = button(
+        priorCompleted ? 'Done ✓' : 'Complete',
+        priorCompleted ? `Mark ${exercise.name} set ${set.ordinal} incomplete` : `Complete ${exercise.name} set ${set.ordinal}`,
+        async () => {
+          const priorCompleted = Boolean(set.completedDate);
+          completed.disabled = true;
+          completed.textContent = 'Saving…';
+          status.textContent = 'Saving…';
+          try {
+            await options.actions.updateSet(exercise, set, { completed: !priorCompleted });
+            completed.textContent = priorCompleted ? 'Complete' : 'Done ✓';
+            completed.setAttribute('aria-pressed', priorCompleted ? 'false' : 'true');
+            status.textContent = 'Saved';
+          } catch {
+            completed.textContent = priorCompleted ? 'Done ✓' : 'Complete';
+            status.textContent = 'Retry';
+          } finally {
+            completed.disabled = false;
+          }
+        },
+      );
+      completed.classList.add('is-complete-toggle');
+      completed.setAttribute('aria-pressed', priorCompleted ? 'true' : 'false');
+      const setMenu = button('⋯', `${exercise.name} set ${set.ordinal} actions`, (event) => options.actions.openSetMenu(exercise, set, event));
+      setMenu.classList.add('is-menu');
+      rowActions.append(completed, status, setMenu);
+      row.append(setType, rowActions);
+      table.append(row);
+    }
+    const setIds = new Set(exercise.sets.map(set => set.id));
+    for (const child of Array.from(table.children)) {
+      const id = (child as HTMLElement).dataset.setId;
+      if (id && !setIds.has(id)) child.remove();
+    }
+    exercise.sets.forEach((set, index) => {
+      const row = Array.from(table.children).find(child => (child as HTMLElement).dataset.setId === set.id);
+      const expected = table.children[index + 1];
+      if (row && row !== expected) table.insertBefore(row, expected || null);
+    });
+    if (table.parentElement !== group) group.append(table);
+    if (group.parentElement !== exerciseList) exerciseList.append(group);
+  }
+  const exerciseIds = new Set(snapshot.exercises.map(exercise => exercise.id));
+  for (const child of Array.from(exerciseList.children)) if (!exerciseIds.has((child as HTMLElement).dataset.exerciseId || '')) child.remove();
+  snapshot.exercises.forEach((exercise, index) => {
+    const group = Array.from(exerciseList.children).find(child => (child as HTMLElement).dataset.exerciseId === exercise.id);
+    const expected = exerciseList.children[index];
+    if (group && group !== expected) exerciseList.insertBefore(group, expected || null);
+  });
+  if (exerciseList.parentElement !== root) root.append(exerciseList);
+  syncWorkoutRestTiming(root, snapshot, options, signature);
+}

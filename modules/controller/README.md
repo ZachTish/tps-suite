@@ -1,0 +1,1214 @@
+# TPS Controller
+
+## 4.0.1 — Avoid calendar timestamp-only writes
+
+Calendar refreshes no longer rewrite an otherwise unchanged event solely because
+the feed regenerated DTSTAMP. Sequence, LAST-MODIFIED, schedule, status and other
+authored event changes still persist; the last meaningful revision remains the
+stale-content guard. This reduces note uploads and downstream recurrence work
+without adding a cache, timer or writer. Keys and source settings remain configurable.
+No settings or notes are migrated automatically. Minimum Obsidian remains 1.12.3.
+
+Regression coverage repeats twenty timestamp-only refreshes with zero mutation
+entries or recurrence paths, then verifies a real title change and rejection of
+an older payload. Separate checks preserve sequence and LAST-MODIFIED changes.
+Validation: 158 focused assertions and 812 full-suite tests pass (three existing
+optional skips). The separate production build deploys to the test vault;
+explicit plugin unload, manifest refresh and reload verified 4.0.1. Three refreshes
+through the installed Controller with a synthetic feed and scoped record snapshot/
+path planner produced zero writes and preserved the fixture body. The complete
+installed GCM snapshot was blocked by a pre-existing malformed archived QA note,
+so that installed check isolates snapshot admission and does not establish full
+vault integration or multi-device acceptance. Outbound test automation stayed off.
+
+## 4.0.0 — Shared record identity named id
+
+Controller now uses `id` for the canonical record envelope and for standalone
+note creation. With GCM installed, physical note identities follow its published
+storage profile; existing configured keys, including `tpsId`, retain their values
+until an explicit GCM property migration changes that key. Calendar indexing,
+local-counterpart suppression, cancellation-ledger matching and note-rule
+protection use that configured physical key instead of assuming a spelling.
+Calendar templates cannot copy a canonical `id` from their source note. External
+and provider IDs, deterministic occurrence ID values, cancellation history,
+filenames, note bodies and settings routes are preserved.
+
+Native calendar import/mutation requires GCM nativeRecords API **7** (GCM 9.0.0).
+An earlier generation is rejected before writes with an explicit upgrade error.
+Read-only reminder projections continue using their existing handle `id` contract.
+Standalone notes authored under the former `tpsId` default need an explicit key
+conversion before using the new standalone default; this is the reason for the
+major version. This release adds no navigation scan, background migration, repair,
+retry, watcher, timer or persisted consumer setting. Minimum Obsidian remains
+**1.12.3**; Controller's settings destination map and mobile layout are unchanged.
+
+Focused regressions exercise canonical/uppercase IDs, configured and profile-
+selected physical keys, authoritative owner failures, ledger cancellation,
+calendar import identity preservation and rejection of API 6/unknown generations.
+Final versioned validation passes 809 checks with three existing optional skips
+(812 total) and zero failures. The separate final ordinary stable build deployed only to the Test vault and
+was reloaded by manifest ID. Actual installed creation/update integration checks
+passed with preserved IDs and bodies; their precise synthetic boundaries and
+SHA-256 hashes are recorded in [4.0.0 release notes](release-notes/4.0.0.md).
+Production installation remains the user's BRAT pull.
+
+## 3.3.1 — Bound failed startup calendar work
+
+A failed startup calendar attempt now consumes that startup obligation. Previously
+a rejection left it pending, so the existing four-second sync-request poll ran the
+same reconciliation again even when there was no request. The configured calendar
+interval and explicit sync commands still run normally, and failed explicit
+requests retain their existing acknowledgement and retry contract. Metadata or
+Sync readiness skips remain pending. If a restart joins an old stopped flight,
+the new startup remains pending until that flight drains; stale callbacks cannot
+consume a newer startup. Errors remain errors and do not emit false completion.
+
+This patch changes only the existing startup flag's settlement. It adds no timer,
+cache, retry policy, repair, note mutation or setting. Controller's settings hub,
+defaults, mobile behavior and minimum Obsidian version (1.12.3) are unchanged.
+
+The production diagnosis found core indexing complete, no missing Markdown
+metadata, no mounted Finance consumer and no Finance reads/model builds during a
+20-second settled observation. Controller did repeatedly reject calendar sync for
+a record conflict. Those errors occur after the metadata readiness gate; this fix
+is not evidence that they caused the original indexing delay. The installed
+test-vault reproduction uses the real automation class with an isolated synthetic
+calendar source and workspace, all eight active TPS plugins enabled, and no
+external feed or note writes. Across five calls through the actual installed
+request-fulfillment owner, physical attempts fall from five to one; the other four
+calls reach the request store normally. A subsequent manual sync completes and
+100 further polls perform no extra startup attempts or recurrence work. These are
+operation counts, not cold-start speed measurements; DevTools is foreground and
+the underlying document is visible but unfocused. Focused regressions additionally
+cover the configured interval, readiness, overlap and unload/restart. The full
+suite passes 806 checks with three existing optional skips; TypeScript and the
+separate production build pass. The final 3.3.1 runtime is reloaded and core
+metadata remains clean. `data.json` is byte-identical; the existing desktop replica
+startup route updates its calendar request during reload. No production reload or
+deployment was performed. Artifact hashes are in the public release notes. Test
+deployment is separate from the user's production BRAT pull. Physical mobile and
+the original production cold-indexing delay remain unmeasured.
+
+## 3.3.0 — Choose reminder notes with a saved Base view
+
+**Reminder rules → choose a reminder → Choose notes → Choose notes using** now
+offers **Reminder filters** (the unchanged default) or **Base view**. Choose an
+existing `.base` file and an exact saved view name, then use **Check view** to
+inspect the matching-note count without sending notifications. The Base replaces
+that reminder's required statuses/folders and ignored paths/tags/statuses. Those
+manual settings remain saved when switching back. Global exclusions, archive and
+calendar cancellation protections, date type, stop conditions, snooze and delivery
+ownership still apply. Base reminders always target whole notes; unmatched
+external events require an ordinary reminder.
+
+Membership selects eligible notes; it does not notify merely because a note
+enters the view. **When & How → Property** chooses the date/time field, with the
+existing offsets, end-time, repeat and all-day settings. A missing/unparseable date
+does not create an alert. Notes leaving the selected view stop participating on
+the next existing evaluation/refresh. No note properties are written by matching.
+The implicit legacy working-status selection exception does not override a Base
+that selects working notes; explicit timing and stop settings still apply.
+
+The existing Obsidian native `base:query` handler evaluates saved global/view
+filters and formulas, saved limit and group visibility. Temporary search text is
+not part of the selection. No Base is mounted. Each reminder pass validates each
+Base once and runs one query per distinct Base/view, sharing duplicate selections.
+When every enabled reminder uses a Base, Controller reuses those query results
+rather than making an additional full-vault candidate inventory. Mixed rules
+retain the ordinary metadata inventory. Membership discovery reads Base files,
+not note bodies; current-source publication reads only eligible/uncertain notes
+under the existing readiness and mutation guards. Core queries still enumerate
+vault metadata and evaluate displayed columns, so costly Base formulas can cost
+CPU. No persistent membership cache, watcher, poller, repair or delivery route is
+added. Existing configured-Base file changes reuse the reminder debounce and
+refresh mounted lists without rebuilding commands or delaying calendar sync.
+
+Compatibility: minimum Obsidian remains 1.12.3 for existing reminders. Base
+selection requires the Bases core plugin and its native query capability,
+feature-detected through an internal interface and verified on Obsidian 1.14.4.
+An unavailable capability, missing Base/view, invalid YAML/filter structure or
+context-dependent `this` yields a configuration error; it never falls back to all
+notes. Native schedule publication keeps its existing last-valid-schedule policy.
+The notification list retains prior items and displays an inline error until a
+successful refresh. Native Base expression/formula errors can silently omit rows;
+**Check view** is a membership count, not an expression validator. Check the Base
+itself if results are unexpected. `this` in any formula is conservatively rejected,
+including unused formulas, because background evaluation has no display context.
+
+The settings destination map and default Overview route are unchanged. Only the
+selected matching mode's controls are shown, with no nested disclosure. Base/view
+pickers have accessible labels; Check view reports through a status region.
+Controls stack and fit narrow screens. Only the additive per-reminder
+`selectionMode`, `basePath` and `baseView` fields are persisted; absent mode keeps
+existing behavior. A minor version reflects this backward-compatible option.
+
+Validation on 2026-10-09 uses the installed 3.3.0 Controller, the actual Obsidian
+1.14.4 native Base query and all eight active TPS consumers in the test vault.
+Two Base reminders share one query and its one core metadata inventory, with one
+eligible note source read and no projection writes. Five passes take 79.7–84.4 ms;
+these are desktop computation samples, not startup/navigation or mobile timings.
+After a synthetic note leaves the view, both the schedule and notification list
+are empty and projection performs zero note reads. Missing views reject the
+projection. Note bodies and real Controller settings remain unchanged.
+
+Native settings QA checks mode/file/view selection, a three-note Check view
+result, and preserved manual filters when switching back. A 390px isolated layout
+check reuses the installed styles and control markup: visible controls fit, labels
+wrap and targets are at least 36px high. This is desktop layout emulation, not
+physical iPhone notification delivery or a mobile native-query acceptance test.
+The disabled draft saves only in memory; synthetic fixtures are archived directly
+from Inbox. No outbound provider or pairing is enabled. Focused regressions cover
+query sharing, a 4,049-note candidate fixture, manual-mode compatibility,
+metadata/rename/delete bursts, Overdue consistency, collapsed-rule read counts,
+errors, stale refreshes and closed views. Final validation requires the full
+declared suite, TypeScript and a separate production build reporting `target=test`,
+followed by a targeted manifest-ID reload. Exact test totals and final artifact
+hashes are recorded in the public release notes. Production installation is a
+BRAT pull and remains separate from test-vault deployment.
+
+## 3.2.0 — Create the current and next recurring occurrence
+
+Calendar rules → configure a feed → **Recurring event notes** can now select
+**Current + next occurrence**. Existing feeds retain **All occurrences in import
+window** until changed. The new mode creates active occurrences and one upcoming
+noncanceled occurrence per source series, using the existing sync interval to
+advance after an event ends. Current means `start <= sync time < end`; overlapping
+active occurrences are retained. Future ties use the stable occurrence identity.
+One-off events are unchanged. Calendar rules → Sync and safety → **Import horizon
+(days)** controls the existing lookahead (default 60, valid integers 1–3660).
+Sparse series require a window that actually includes their next occurrence.
+
+Selection limits new recurring notes, not observation or reconciliation. Every
+source occurrence remains present for missing-event checks. Existing future notes
+still receive source updates/cancellations, and configured reschedule preservation
+can create a replacement for an already-owned occurrence. Past notes remain.
+Switching modes does not prune healthy previously imported notes. The explicit
+14-day backfill command may still create historical occurrences. Unowned canceled
+occurrences are skipped in the new mode; existing canceled records keep the
+configured cancellation/restoration behavior.
+
+Selection happens after source-authority and ownership planning, before template
+reads/rendering. No local recurrence rule, timer, watcher, repair pass, extra
+vault inventory or persisted selection cache is added. Existing field keys,
+template kinds, exclusions, identity conflicts, history and cancellation rules
+remain authoritative. `recurringImportMode` is per feed (`all`/`next`, absent means
+`all`); `calendarImportHorizonDays` is shared. Invalid horizon values use the legacy
+60-day default, and invalid UI drafts are not saved. Settings normalization keeps
+an absent per-feed mode absent and does not request a startup save.
+Proven older source revisions in a next-mode recurring series stop the sync before
+templates or mutations; the existing all-mode stale-skip policy is unchanged.
+
+The existing destination hub, default Overview route and one selected feed editor
+remain unchanged. Native dropdown/number controls extend Calendar rules; they are
+available while a feed or its creation is disabled. No new disclosure or persisted
+navigation state is introduced. Existing stacked settings CSS and horizontal
+mobile route strip apply. Physical iPhone acceptance remains user/device testing.
+
+This is an additive minor release. The test-vault deployment and public BRAT release
+are separate from production installation. See the source-backed
+[TishOS app implementation plan](docs/tishos-app-recurring-import-plan.md) for matching
+selection, durable batch observation and independent app-owned settings. The app
+plan requires no Controller references, settings lookup or runtime dependency;
+it also identifies existing plugin-specific checks to remove from that app path.
+
+Validation on 2026-10-09: all 767 declared checks passed with zero failures/skips,
+including the exact historical notification reference, 16 new calendar selector/
+horizon/stale-source regressions, settings coverage and complete mobile-module
+loading. The separate production build deployed 3.2.0 only to the test vault;
+Hot Reload and an explicit manifest-ID reload both loaded it. All eight active TPS
+consumers remained enabled. Installed importer QA used the real loaded constructor
+and memory-only provider/GCM/file boundaries: identical 20-future-occurrence input
+created 20 notes in 3.1.8 and one in next-mode 3.2.0; repeated sync and repeated
+cancellation made zero writes. Ended/canceled source inputs advanced one new note
+and retained history. Both versions registered zero extra listeners/inventories;
+the first template read stayed one. These are operation counts, not cold-start
+speed or physical mobile measurements. Synthetic advance changed source dates
+rather than replacing the renderer clock.
+
+The actual native settings picker selected next on a disabled synthetic feed;
+the horizon accepted 120 and rejected an invalid 0 draft without another save.
+Only an isolated settings facade received those edits. It was removed, and real
+Controller `data.json` stayed byte-identical. A full authoritative test-vault
+snapshot found 30 pre-existing calendar identity-conflict fixtures, so this QA did
+not bypass safeguards to create real files. Real source parsing/identity conflict,
+ownership and write behavior are covered by the declared regression suite; an
+external-provider end-to-end/device acceptance run remains a rollout limitation.
+
+## 3.1.8 — Bounded reminder work and startup ownership
+
+Controller continues to own its existing alert rules, signed schedules/catalogs,
+calendar import, explicit note rules, sync requests and configured automation.
+Ordinary note changes refresh only the notification schedule through the existing
+single serial bridge drain. Startup, pairing, manual catalog refresh and the
+existing 60-second catalog cadence retain full command discovery. A full request
+cannot be downgraded by a concurrent note-only request; events arriving during
+publication coalesce into one pending pass. The redundant metadata post-active
+retry is removed. A trailing schedule-only pass updates native readiness and
+errors without losing the full pass's command counts or masking an actual
+catalog failure. This per-pass bookkeeping is transient and never published.
+
+With GCM's additive `nativeRecords.capabilities.indexedSnapshot`, read-only
+notification matching uses its synchronous settled metadata projection instead
+of invoking an authoritative full-vault source snapshot. `ready: false` fails the
+whole publication and preserves the last signed schedule. An older GCM without
+that capability retains the existing source-authority path. The metadata
+projection has no mutation token and cannot authorize note writes or identity
+changes. Calendar imports retain authoritative source snapshots and exact plans.
+
+For a settled index, reminder eligibility reuses the same configured projection
+policy before reading bodies. Exclusions, required fields and stop conditions
+run before uncertainty. A missing rule key in a valid property map is known
+absent; missing metadata, malformed maps and explicitly invalid date values stay
+conservative. Eligible notes still receive one fresh source read and current
+exclusion/YAML/identity checks. Repeat/catch-up, snooze, all-day, horizon,
+completion and template policy remain configured. No hardcoded date cutoff,
+repair pass, persisted cache or replacement notification delivery is added.
+
+Startup file bursts do not create/cancel notification debounce timers before
+layout publication. Unpaired or unused reminder routes also do no note-driven
+timer work; changing settings can still publish an empty replacement to clear an
+old schedule. Known plugin state, assets and the Finance relay's configured
+request folder do not count as reminder-note changes. After first readiness,
+service-only metadata resolution does not refresh schedules or extend calendar
+settlement. A transient pending-note obligation preserves actual note changes
+through core metadata resolution; it is consumed before callbacks so a new event
+is not dropped.
+
+The obsolete Controller parent/child full-vault maintenance loop, its bootstrap
+poll and delayed startup dispatch are removed. GCM's owning create/edit actions
+remain responsible for relationships. Completion-driven recurrence and the
+existing scoped post-calendar-sync recovery remain unchanged.
+
+Calendar automation now returns explicit completed, not-ready, paused or stopped
+outcomes. A deferred run cannot acknowledge a hidden sync request. A single
+initial-sync obligation is fulfilled when readiness passes by the existing
+four-second request loop; no additional readiness timer is created. Role/mobile
+and lifecycle guards prevent old layout callbacks or stopped owners from
+starting new work. Shutdown invalidates APIs and stops all producers before
+awaiting active drains. An already entered atomic write cannot be rolled back;
+its owner is drained before teardown completes. With GCM's additive
+`identityApplyCancellation` capability, Controller passes an in-memory
+`isCurrent` predicate to the existing identity batch, which checks before later
+entries and atomic steps. A stopped batch preserves its committed prefix and
+starts no rollback or automatic retry. Older GCM versions retain their existing
+whole-batch drain behavior; coordinated updates provide the narrower stop bound.
+
+Unchanged settings batches perform zero load/save attempts, settings-change
+events or schedule refreshes. Missing attachment configuration is compared to
+the actual persisted value and therefore migrates once instead of requesting an
+unchanged migration save on every startup. No setting key, default or persisted
+UI field is added. Focused operation-count regressions cover unknown/current
+metadata, mixed date-rule keys, schedule/callback concurrency, startup storms,
+service-state resolution, save no-ops, lifecycle stop and readiness fulfillment.
+
+Source validation uses Node 24.19.0 and the exact historical `0.3.5` reference
+(`a8c13dbda82caa95807d4fce912334b8feb9583e`) for the suite's required
+notification-open comparison. The final versioned full suite passes 748 checks
+with zero failures, cancellations or skips; TypeScript and a separate build-only
+`TPS_NO_DEPLOY=1 npm run build` gate pass. The ordinary build deployed to TEST,
+and the TEST renderer reload loaded Controller 3.1.8 with GCM 8.1.0. All four source and
+installed artifacts are byte-identical. The final separate ordinary build retained those verified bytes;
+the numeric public release is the handoff for the user’s BRAT pull.
+
+The actual policy/candidate/target fixture with 4,049 notes, mixed date-rule keys
+and mostly excluded completed notes performs one inventory, 8,098 metadata
+lookups, two source reads, zero authority snapshots and zero writes. One read
+rejects a newly excluded current source; the other preserves a genuine reminder
+whose cached frontmatter is unavailable. The prior engine reads 4,048 sources in
+the same bounded fixture and drops that unknown-metadata reminder. Initial
+4,049-note invalidations make zero notification debounce/cancellation calls;
+100 service-only resolutions after readiness make zero reminder refreshes or
+calendar settlement extensions. One hundred unchanged settings batches perform
+zero loads, saves, events or schedule refreshes. A burst of 100 requests arriving
+inside one notification publication produces exactly one subsequent pass and no
+command registry work. These counts are separate from timing evidence.
+
+Installed QA repeats the 4,049-note reminder fixture through the loaded Controller
+engine, actual candidate discovery, parser and policy with memory-only vault/GCM
+boundaries: one inventory, 8,098 metadata lookups, two raw reads, one occurrence,
+zero writes and zero authority snapshots. Pending indexed readiness rejects
+before further inventory or reads. One hundred queries of the actual installed
+GCM indexed API perform zero raw/cached reads, inventories, writes or authority
+refreshes and return no mutation token. The isolated installed time-tracking
+class also checks its configured key, cold and repeated scans, same-stat edits,
+stale metadata, rename/delete, malformed-source refusal, disabled work and
+disposal. Original service/settings identities are restored; no physical
+fixtures, provider calls, real session mutations or settings saves occur.
+
+All eight active consumers remain enabled in TEST with outbound automation off.
+Controller persists only the intended existing `attachmentSync` default; after
+excluding that one-time migration, its settings hash matches the exact baseline.
+Sync-request runtime state changes naturally and is not claimed byte-unchanged.
+GCM, Health, Finance, Calendar and Linter state remain byte-unchanged; Navigator
+only acknowledges its 8.2.4-to-8.2.5 version update.
+
+Five 30-second foreground TEST warm captures before and after the combined
+Controller/GCM/Health/Navigator update observe median body readiness of
+10.868 to 8.514 seconds, GCM readiness of 14.886 to 9.187 seconds and Health
+readiness of 15.123 to 9.471 seconds. These measurements cover the combined
+update, not Controller alone. Total raw reads rise from 36 to 44 and cached reads
+from 34 to 73/74; the three repeated inventories are unchanged. TEST is unpaired
+for Controller notifications and has time tracking disabled, so these captures
+do not demonstrate lower total startup reads or exercise configured reminder
+publication. The targeted installed fixtures establish the bounded read savings
+for those routes separately. Warm readiness is not cold application startup,
+first-input latency, production performance or physical-phone timing.
+
+Full metadata inventory/sorting, eligible source verification and configured
+repeat projection remain. An actual calendar import still obtains source
+authority and validates its plan. The indexed and mid-batch stop improvements
+require the coordinated GCM capabilities; older releases retain their prior
+boundaries. No source count establishes production latency, cold vault readiness
+or physical mobile startup timing.
+
+
+## 3.1.7 — Scope recurrence recovery and preserve reminder filter focus
+
+Successful native calendar sync now gives GCM recurrence recovery the final paths
+returned by its validated mutation batch. Unchanged syncs perform no recurrence
+dispatch. Created, updated, renamed, canceled and archived records use their actual
+applied handles; failed or interrupted batches do not report success or trigger
+recovery. A thrown recovery failure now rejects the sync caller after logging instead of
+silently reporting successful settlement. Calendar planning, atomic protections,
+settings, device-role gates and the existing sync interval remain unchanged.
+
+GCM remains the sole recurrence worker. Pair this release with GCM 8.0.0 for scoped
+recovery and coalesced overlapping startup/sync requests. Older GCM versions remain
+functionally compatible but may ignore the scope and scan the full vault after a
+changed sync. No-argument GCM startup recovery and completion-driven recurrence
+remain intact. The calendar timer no longer incidentally checks unrelated notes
+after each sync; direct edits outside GCM's completion actions are covered by GCM's
+existing startup recovery. This adds no timer, watcher, cache, automatic retry,
+mailbox, settings migration or vault remediation.
+
+The reminder-rule filter also keeps its original input mounted while results
+change. Typing no longer detaches the focused input after the first character;
+multi-character input, no matches, clearing and IME composition preserve focus,
+selection and the existing listener. Only the result region is rebuilt. No new
+stored UI state, timer, settings value or rule evaluation is added.
+
+Actual-source regressions cover zero dispatches/inventories/reads/writes for the
+unchanged-sync callback, exact changed-path dispatch, no Controller inventory,
+role/API readiness, error propagation, validated creates/renames/cancellations/
+archives and exclusion of unchanged owners. The focused Controller checks pass
+159/159; paired GCM scope/protection/native-record/mutation-owner checks pass
+312/312, including actual dated and undated successor creation with stale metadata.
+The undated tracker regression reproduced two successors before the GCM source
+authority correction and creates one afterward. Recovery reuses its existing raw
+read and unchanged parser; current source owns the generation marker, completion
+and recurrence rule. Existing creation helpers retain their handled-failure
+Notice/log/false contract, while thrown worker errors reject joined callers after
+independent pending scopes drain. Reminder-filter and command-surface checks pass
+31/31; the exact 3.1.6 baseline fails two of four filter controls. These are synthetic boundary
+and operation-count tests, not provider delivery, physical-device latency or
+production measurements. The final versioned full suite passes 713/713 with no
+skips, including the three historical notification comparisons against the exact
+released 0.3.5 baseline. TypeScript and a separate final build-only gate pass with
+`TPS_NO_DEPLOY=1`.
+
+The ordinary build was then deployed and targeted reload loaded Controller 3.1.7
+beside GCM 8.0.0 in TEST. Installed compiled Calendar automation, Controller
+dispatch, the published GCM API and its actual worker passed the bounded replay:
+unchanged sync performs zero dispatches, inventories, metadata lookups, reads or
+writes; two applied ordinary paths cause one dispatch, two metadata lookups and
+zero inventories, source reads or writes. No-argument recovery still inventories
+1,000 synthetic notes once and inspects their metadata once each. Queued recovery
+while metadata remains stale creates exactly one successor for both dated and
+undated tracker rules. Vault, metadata, atomic writes, journal and daily-note
+classification boundaries are synthetic; no real notes, providers or recurrence
+state were changed. These operation counts do not establish input-to-paint or
+physical-device speed.
+
+Installed filter UI QA also passes with the actual settings renderer and native
+controls in Obsidian 1.14.4's separate, visible Settings window. TEST has no real
+reminder rules, so the fixture uses two immutable synthetic rules and refuses
+save/execution calls. Twelve native input events and thirteen snapshots preserve
+the same connected input, toolbar, owner-document focus and cursor. Typing
+`morning` shows one rule, `zzzz` shows none and clearing shows both. Save, reminder
+restart and policy-refresh attempts stay at zero. Cleanup restores the original
+settings nodes, instrumentation and leaf; real settings remain unchanged. The
+final ordinary build passed with byte-identical artifacts and reported the test
+runtime unchanged. The public numeric
+[3.1.7 release](https://github.com/ZachTish/tps-controller/releases/tag/3.1.7)
+was published and is available through BRAT. See
+[3.1.7 release notes](release-notes/3.1.7.md) for the tested artifact hashes.
+Minimum Obsidian stays 1.12.3; production installation remains the user's BRAT pull.
+
+## 3.1.6 — Wait for GCM before maintenance
+
+Controller's GCM lookup now requires its published API before consulting private
+services. Recurrence, parent-link maintenance and hourly timer lookup cannot use
+partially initialized or unloaded GCM service objects. Once GCM publishes its API,
+the existing tick observes it directly and retains the same service receivers and
+compatibility fallbacks. No new availability state, listener, poller, retry, cache,
+writer, setting or UI change is added.
+
+Actual-source regressions cover absent/null/false APIs, removed unload authority,
+enabled and missing plugins, User role, legacy plugin ID, later publication and
+unrelated Calendar/Notifier lookups. The isolated actual Controller/GCM-method
+replay distinguishes the retired parent-repair no-op from still-active legacy
+self-link creation. Synthetic writer/link/safety boundaries do not establish
+physical delivery or input-to-paint latency. All 700 versioned checks pass.
+The full suite's three optional notification-open historical comparisons were
+then run separately against their exact released 0.3.5 baseline: all five
+lifecycle checks pass with no skips. TypeScript and a separate build-only
+verification pass. The ordinary build deployed the matching artifacts to TEST;
+a TEST renderer reload preserved all eight active consumers' settings/data/enabled
+state and Controller's passive role. Installed actual-method controls pass 8/8,
+versus 4/8 before the fix. The TEST window was hidden and unfocused; private
+maintenance receivers were synthetic, and no real automation or physical UI
+timing was measured. Final evidence is in
+[3.1.6 release notes](release-notes/3.1.6.md).
+Minimum Obsidian remains 1.12.3; production installation is the user's BRAT pull.
+
+## 3.1.5 — Remove unused calendar startup work
+
+Native calendar reconciliation no longer scans all Markdown metadata at plugin
+startup or keeps a second index refreshed by metadata/create/delete/rename
+events. That index was not consumed between syncs: every calendar sync already
+fetches its feeds and rebuilds planning state from GCM's current authoritative
+snapshot before planning mutations. The existing snapshot, conflict checks,
+single-flight guard, token/revision validation, missing-event policies and
+reschedule behavior remain unchanged. No new cache, watcher, timer, writer,
+schema, settings migration or feature is added.
+
+An isolated installed 3.1.4 baseline with 10,000 synthetic ordinary notes made
+one inventory call, 10,000 metadata reads and 10,000 GCM inspections, and attached
+four unused listeners in both legacy and native calendar modes. This patch
+removes that work; authoritative per-sync discovery retains its existing cost.
+Regression coverage includes idle edits/deletions/reschedules, stale queued
+metadata, duplicate ownership, concurrent sync and mutation safety. Existing
+settings destinations, controls, commands and desktop/mobile layout are unchanged.
+Final evidence and limitations are recorded in
+[3.1.5 release notes](release-notes/3.1.5.md). Minimum Obsidian stays 1.12.3.
+This plugin update is a BRAT handoff, not a TishOS TestFlight build or evidence
+that production/physical devices have installed it.
+
+## 3.1.4 — Keep reminder matching from blocking interactions
+
+Reminder matching reuses GCM's existing conflict-aware source snapshot instead of
+classifying every note again when one unrelated record has an identity conflict.
+Valid record identities come from that snapshot; only conflicted paths retain
+their individual inspection. Conflict diagnostics never grant an identity by
+themselves. Configured event fields, completion/deletion ownership and legacy
+inline matching remain intact. Older, disabled, invalid or failed snapshot APIs
+retain the previous matching path. No new cache, watcher, retry, writer, schema
+or settings change is introduced.
+
+Whole-note reminder targets also stop requesting GCM's retired inline-task
+inheritance policy. They still read current source for publishing and preserve
+frontmatter, prose tags, completion and reopening checks.
+
+Profiling the installed previous version identified an approximately 0.9-second
+CPU stretch inside event matching and a separate 1.15-second main-thread long
+task. A conflict-inclusive snapshot was already available without another
+whole-vault inspection. Regression tests cover repeated publications, empty and
+failed snapshots, custom mappings, duplicates and completion/deletion changes.
+Pair this update with GCM 7.3.6, which bounds conflict-diagnostic collection.
+Final validation and limitations are in [3.1.4 release notes](release-notes/3.1.4.md).
+This backward-compatible performance patch keeps Obsidian 1.12.3+ and applies to
+desktop and mobile. Test-vault verification is not physical-device acceptance
+or evidence that production has installed the release.
+
+## 3.1.3 — Stop historical body scans during native reminder refresh
+
+Whole-note calendar matching no longer reads every Markdown body to discover
+retired inline event identities. Existing native-record snapshots, configured
+frontmatter identities, renamed/rescheduled matching and completion ownership
+remain unchanged. Legacy matching retains its inline reader. This corrects the
+existing matching route shared by reminder evaluation and signed publication;
+it adds no index, watcher, retry, settings migration or writer.
+
+Three matching passes over 4,001 synthetic notes previously made 12,003 body
+reads; the regression now requires zero. Completion still suppresses a matched
+external event and deletion releases the removed note's ownership. The installed
+3.1.2 Test-vault baseline read all 13,812 bodies on both cold and warm passes.
+Those background-window operation samples are not phone input-to-paint timings.
+Native-record cold indexing, configured frontmatter matching and real reminder
+candidate reads still have their existing costs. Final suite, installed
+verification and hashes are in [3.1.3 release notes](release-notes/3.1.3.md).
+Minimum Obsidian stays 1.12.3. This backward-compatible patch is a BRAT handoff,
+not a claim that production or the phone is updated.
+
+## 3.1.2 — Confirm reminder completion
+
+Note reminder status actions now honor GCM's committed-write result. A refused,
+cancelled or failed write no longer appears completed or emits a successful
+file-update signal. A zero-change result is accepted only when a fresh read of
+the same current note proves the requested status is already present (or a
+requested status clear is already absent); stale metadata or a replacement at
+the former path cannot confirm completion. Positive writes add no verification
+reads. GCM still owns its safety prompts, note mutation and filename handling;
+Controller adds no fallback writer, repair, deduplication, queue or retry.
+
+Signed schedule projection now parses each candidate's current saved frontmatter
+from the body read it already performed, using one fresh read instead of one
+cached read. Status, schedule, semantic title and tags use that same snapshot,
+so a just-saved completion or reopening does not wait for metadata indexing.
+Unreadable, malformed or replaced sources refuse publication and keep the last
+verified schedule; they never become an authoritative empty schedule. Valid
+removal of the schedule/frontmatter still removes the reminder. Discovery still
+uses metadata to select candidates, so a newly added schedule without an indexed
+property waits for the ordinary metadata event. There is no additional scan,
+cache, watcher or poller. Display-only calculations retain cachedRead and parse
+available current content; on an unavailable/invalid display read they preserve
+the existing best-effort metadata behavior, not publication authority.
+
+This release also includes the native Mac invalidation and serialized-publication
+changes from the locally installed but unpublished 3.1.1 candidate below. No
+settings, defaults, reminder identities or note schema change. The separate GCM
+completion/rename race fix is required to stop that writer's duplicate creation;
+Controller does not merge or delete existing duplicate notes.
+
+Focused completion/source regressions pass 32/32. The combined reminder and
+bridge selection passes 169 cases with three existing historical-comparison
+skips. Coverage includes awaited success/rejection, zero-result refusal versus
+authored no-op, file identity, completion/reopening ahead of metadata, source
+removal, uncertain parse/read retention, consistent title/tags and operation
+counts across 1,000 unrelated notes. Ten completion checks failed against the
+prior runtime; eleven source-freshness checks failed before the projection fix.
+The complete no-deploy declared suite passes 670 cases with three existing
+historical-comparison skips and no failures or cancellations; TypeScript and
+its production bundle build pass. Separately, 13 selected native TishOS
+notification-cancellation regressions pass in the isolated iPhone simulator
+using synthetic/mocked notification boundaries, not physical delivery evidence.
+The separate final production build and Test-vault deployment passed. Official
+Obsidian CLI reload/version checks confirmed Controller 3.1.2 and GCM 7.3.2;
+all four installed runtime artifact hashes match the final build. Two unique
+synthetic notes completed through the actual native-notification completion
+route and GCM rename, each changing six triggers to zero while retaining one
+file and its body. A held stale GCM write also rejected after a newer core
+frontmatter completion, preserving the completion date/body and zero triggers.
+Fixtures were archived after passing. Settings were cloned in memory and both
+plugins' data.json hashes stayed unchanged; GCM's recurrence-session lifecycle
+did change, so this is not a claim that all runtime state remained unchanged.
+No external delivery or production installation was tested. Test-vault validated;
+BRAT handoff, not a production installation. See GitHub releases for publication
+status; artifact hashes and verification details are in the release notes.
+Minimum Obsidian remains 1.12.3. See [3.1.2 release notes](release-notes/3.1.2.md).
+
+## Included 3.1.1 — Native Mac refresh invalidation
+
+On macOS, a completed signed Controller publication can send a bounded,
+authenticated, content-free signal to the existing paired TishOS app. The app
+reads its authorized vault and publishes through native private CloudKit; no
+browser login, trigger file, note payload or new secret is added. A signed
+response means queued, not uploaded. Unsupported platforms and unavailable
+listeners keep the existing filesystem delivery path.
+
+Concurrent publication requests now join one serial drain, so a completion or
+deletion arriving during publication gets a fresh pass before callers treat
+the schedule as current. Stale, revoked, stopped or nonterminal pairings cannot
+send invalidations. Existing whole-note records, configured calendar fields,
+reminder rules, import settings and secret storage are unchanged.
+
+The full no-deploy suite passes 637 tests with three existing skips; focused
+bridge/mobile tests pass 80/80. The Node transport also interoperates with the
+real Swift listener. This validation of the included 3.1.1 changes is not proof
+of physical-widget background repaint or production installation.
+
+## 3.1.0 — Configurable native calendar fields
+
+Native external-calendar sync now uses the configured title, status, and start
+property names for note creation, reconciliation, cancellation, reschedule
+actions, and missing-event archive decisions. The separate **Calendar event end
+datetime** setting defaults to `end`; the existing **Duration Property**
+setting remains a duration/reminder field and is not repurposed. Calendar field
+names are frozen at the beginning of each sync. In Advanced, Apply uses GCM's
+confirmed property-key migration for the new end-datetime field, as for the
+existing fields. Existing notes are not silently converted on plugin load.
+
+A configured calendar template may author `kind` as a nonempty YAML list of
+text values. Controller preserves the values as written; GCM owns the public
+kind mapping and the native-record identity remains separate. Templates may
+also contain tags, which Controller copies to new notes, so remove tag fields
+from a template when tags should be manual. A configured reschedule action
+cannot overwrite the configured schedule keys or GCM's kind-list key and legacy
+classification aliases.
+
+Focused regressions cover custom field creation, unchanged repeat sync,
+cancellation/restoration, missing-event archive, protected reschedule keys,
+and list-valued template kinds. The declared suite passed 615 checks with
+three existing skips. Minimum Obsidian remains 1.12.3. The separate final
+build deployed to the Test Vault; Hot Reload showed the editable event-end
+datetime field beside the independent duration field. Controller data.json
+remained unchanged. The test vault has no external feeds, so live feed
+reconciliation and physical iPhone behavior remain unverified. Production
+behavior remains unverified; hashes are in [3.1.0 release notes](release-notes/3.1.0.md).
+
+## 3.0.0 — Whole-note calendar records and reminders
+
+Controller now creates and synchronizes external calendar occurrences as ordinary
+Markdown event notes. New installations use native event records. The Calendar
+settings no longer offer a storage-mode selector or per-feed task-item output;
+feed editors keep note folders, templates, reschedule actions, and sync safety.
+An older saved `legacy` calendar mode pauses sync instead of entering its former
+inline writer. Review the existing calendar items, then use **Use whole-note
+events** in Calendar rules to enable note sync. That action does not convert or
+delete historical task lines. Saved per-feed task output is normalized to note
+output when settings load.
+
+Reminders now target full notes and external events. The Inline task reminders
+selector is gone; saved values normalize to notes-only. Old task-line alerts
+cannot snooze, complete, move, or edit an inline task through Controller. Note
+reminders, note status/frontmatter actions, and read-only historical calendar
+quarantine review remain. No note migration, startup repair, or vault-wide
+conversion runs automatically.
+
+The global and per-rule checkbox-state reminder controls are also retired.
+Saved checkbox filters are ignored for whole-note reminders and are cleared on
+the next settings save; note status, tag, path, and time filters still apply.
+
+The default Calendar rules route still shows feed actions and one selected feed
+editor; Reminder rules retains its existing rule editor. Mobile uses the same
+compact settings strips and stacked controls. This release changes runtime
+behavior and saved mode interpretation, so it is versioned as a major release.
+The minimum supported Obsidian version remains 1.12.3. Full validation and
+Test-vault deployment evidence are in [3.0.0 release notes](release-notes/3.0.0.md).
+Production installation remains the user's BRAT pull.
+
+## 2.7.0 — Calendar lifecycle and deterministic sync
+
+Native calendar notes now honor **No-Loss Sync Mode** for successful feeds: an
+occurrence that is absent from a feed stays unchanged, even when **On Event
+Deletion** is set to archive or delete. An explicit canceled iCalendar event
+still receives the configured canceled status. Turning No-Loss off restores the
+configured missing-event archive policy. The new optional **Missing-event
+status value** writes a user-chosen status when an absent native note is first
+archived with No-Loss off; its blank default preserves an authored status.
+Already archived notes and later user status edits are not overwritten. Feed
+absence is inferred missing, not a confirmed deletion. Legacy task/note mode
+retains its existing grace and quarantine behavior. The settings copy
+distinguishes these paths.
+
+Changing **Canceled Status Value** updates only notes whose current status
+exactly matches a Controller-owned cancellation label. It leaves legacy notes
+with unknown prior status and later user status edits alone, and restores the
+original pre-cancellation status if the event becomes active. The existing
+private cancellation ownership entry records an in-flight label replacement
+so an interrupted batch can resume without losing that provenance. No status
+is automatically set on a new active event.
+
+A recurring master whose whole series moves to a different time can change
+each occurrence's source identity. Native sync now links an unmatched new
+master occurrence to its former note only when the former canonical ID is an
+exact hash of the current series UID and its stored former source-clock time,
+in the same feed scope and local calendar day. It excludes detached exceptions,
+retired/archived records and filtered runs; multiple plausible same-day
+matches fail before writes. The existing **Keep old note when externally
+rescheduled** choice then either retires the former note and creates the new
+one, or reidentifies the former note. Existing previous/current reschedule
+property actions apply. This uses the current source's identity and the
+existing `tpsCalendarSync` property, without a title heuristic, new watcher or
+background repair. It cannot link a changed provider UID or an old untracked
+note whose schedule was locally changed before its first tracked sync; those
+cases remain unmatched rather than risking the wrong association.
+
+The startup calendar settlement gate no longer resets for a folder modify or a
+non-Markdown asset modify. A live Controller trace showed an unrelated `_assets`
+modify extending the 20-second deadline and blocking manual sync. Markdown
+note modifies and content create/delete/rename events still defer as before;
+manual force sync still requires resolved metadata and a settled calendar gate.
+
+Native sync now obtains one GCM path plan per run, then removes unchanged
+owners from the planned write batch by matching their original plan indices.
+Previously it requested a second path plan after a potentially long first
+plan; an intervening vault event invalidated that second request and aborted
+all creates with a misleading path-preservation error. GCM still replans and
+checks the trimmed entries, source identities, paths and generation at its
+write boundary; stale generations or changed path layouts fail before writes.
+Unchanged notes are not replayed through GCM's file queue.
+
+Focused tests cover empty and partial successful feeds, no-op mutation counts,
+explicit cancellation and label changes, blank and configured inferred-missing
+statuses, frozen settings, whole-series shifts with and without preserved
+history, same-day ambiguity, daylight-saving offsets, detached exceptions,
+local edits, and interrupted batches. Full validation passed 622 checks with
+three existing skips. Test-vault deployment and verification are recorded in
+[2.7.0 release notes](release-notes/2.7.0.md). This is a backward-compatible
+minor release; minimum Obsidian remains 1.12.3. Production installation is the
+user's BRAT handoff.
+
+## 2.6.3 — Respect notes-only reminder scope before reading bodies
+
+Reminder discovery now uses the same inline-task scope as target construction.
+When inline reminders are disabled, including **Follow GCM** with Atomic note
+mode or an unavailable GCM, notes without a configured reminder frontmatter key
+are rejected without reading their bodies. Previously discovery read those
+bodies and found task candidates that the configured target builder could never
+emit. Actual frontmatter candidates still read current content to preserve prose
+tags and existing reminder behavior. Enabled inline modes and missing-mode legacy
+behavior keep the source parser, including when task metadata is missing or stale.
+
+This uses the existing runtime policy; it adds no cache, observer, timer, setting
+or metadata-freshness assumption. The regression fixture contains 1,000 unrelated
+notes, an inline task and a frontmatter reminder. Each notes-only discovery now
+makes zero body reads instead of 1,001; three repeated runs stay at zero. Enabled
+inline modes still read and discover the task. Versioned full validation passes
+602 checks with three existing optional historical-comparison skips; TypeScript
+and the separate final build pass. The stable build deployed to the isolated test
+vault. A targeted disable/load-manifest/enable reload verified version 2.6.3,
+which passed the same discovery comparison using its compiled implementation with a synthetic app facade: 2.6.2 read 1,001 bodies
+in each mode; 2.6.3 reads zero in notes-only and Follow GCM/Atomic note modes,
+while scheduled inline mode still reads 1,001 and retains the task. Frontmatter
+candidates remain present in every mode. This check does not measure complete
+reminder delivery latency or change real settings, notes or provider state.
+This is a backward-compatible performance patch; minimum Obsidian stays 1.12.3.
+Versioned tests, build, installed QA and release details are tracked in
+[2.6.3 release notes](release-notes/2.6.3.md). The public release is the BRAT
+handoff; no production speed or installation claim is made.
+
+## 2.6.0 — Connections in one place
+
+Open **Connections** for **Banks & Wallet**, **AI**, **TishOS devices**, or **Food databases**. Apple Wallet setup, bank connect/sync/reconnect/disconnect, pending sign-ins and import history are together. **Bank setup · This device** holds hosting/pairing, automatic refresh, request-folder controls and Plaid credentials. It starts expanded on an unconfigured device. Paired clients do not need the host's Plaid secrets. Changing pairing or credentials refreshes the affected controls immediately. Apple permission and initial Wallet import still happen in the native TishOS app; new Wallet connections write on the iPhone and do not require bank pairing.
+
+The top-level destinations are Overview (default), Connections, Calendar rules, Note rules, Reminder rules, Automations, and Advanced. Calendar feeds and attachment sync retain their existing Controller workflow pages, with direct buttons from Connections. Overview keeps its visible Wallet shortcut. TishOS command pairing/catalog actions moved from Overview to Connections → TishOS devices. Advanced now contains field mappings and diagnostics only.
+
+Update Controller first, then **Finances 1.9.0**, **AI Gateway 0.10.0**, and **Health 3.4.0**. Controller does not bundle or enable those plugins. Finances still owns provider normalization and the account/transaction note writer; AI Gateway still executes AI requests; Health still performs food lookups. This release consolidates connection configuration and controls without rewriting those tested service contracts.
+
+The connection editor API is `api.connectionSettings = { version: 1, render(parent): dispose }`. Controller mounts one editor at a time and disposes it on navigation/hide. Provider-specific editors retain the existing save paths, runtime adapters, commands, and device state. No keys, tokens, pairing authority, queued requests, connection IDs, sync cursors, or note mappings are copied or reset. No connection or provider test runs merely from opening settings. Missing/outdated plugins produce an upgrade/enable message instead of a duplicate configuration surface.
+
+Settings inventory: added Connections and its transient provider selector; moved existing bank/Wallet controls from Advanced; moved TishOS devices from Overview; retained calendar, reminder, archive, attachment, mapping, and diagnostic controls. Retired circular Open Finances/Open Controller connection links. One bank-setup disclosure and AI's existing Diagnostics disclosure are never nested. Native buttons use aria-pressed, visible focus, restored selector focus, and horizontally scrolling selectors; narrow controls wrap. No navigation fields are persisted. Minimum Obsidian remains 1.12.3. This additive API/settings consolidation is a minor release.
+
+See [connection ownership audit](CONNECTIONS.md) and [release validation](release-notes/2.6.0.md) for preserved/retired controls, tests, final build, isolated test-vault deployment, reload, UI verification, limitations, and hashes. Production installation remains the user's BRAT pull.
+
+## Previous releases (historical settings locations)
+
+
+## Visible Wallet connection — 2.5.2
+
+**Overview → Connect Apple Wallet** is available immediately, before Device role,
+on desktop and mobile. The same action remains in Advanced beside bank settings.
+It opens TishOS's Wallet settings only; it does not grant account permission or
+start bank automation. TishOS 0.18.2 (152) exposes the action on its home screen
+even without a linked vault, and starts setup with Choose vault or Connect Apple
+Wallet. Confirm the destination and Apple accounts to begin the initial import.
+
+The six destinations, default Overview, device role, bank hosting/pairing,
+request-folder editing, legacy Stop, status and Finances handoff are retained.
+No persisted settings, defaults or disclosure levels change. Native Obsidian
+buttons retain keyboard semantics and existing narrow-screen wrapping. Focused
+regressions cover default-page placement and working mobile/desktop URL actions;
+the full suite passes 588 cases with three existing opt-in skips and no failures.
+Test-vault desktop and mobile-emulated UI show the action on Overview and
+Advanced; settings remain editable without bank pairing. A separate final build,
+test deployment and reload verify the released artifact. Production installation remains the user's BRAT pull.
+
+## Initial Wallet handoff recovery — 2.5.1
+
+A first-time legacy handoff can retry its acknowledgement after a disk or sync
+failure even if Controller never imported Wallet records. Once the writer is
+durably retired, that exact saved owner is sufficient to resend its receipt;
+active legacy imports still require their original history. A regression test
+reproduces the failure and verifies restart recovery with bank sync paused.
+All 2.5.0 setup/UI behavior remains unchanged. Use 2.5.1 or newer for setup.
+
+
+## Wallet setup on iPhone — 2.5.0
+
+Advanced now separates **Apple Card & Savings** from **Bank connections**.
+Open Apple Wallet goes directly to TishOS 0.18.1 (151)'s Wallet screen. New
+connections need no finance-host pairing: confirm the vault, choose Apple
+accounts/history, and the iPhone starts the initial note import automatically.
+Bank hosting and bank pairing remain independent.
+
+Existing relay users choose **Finish setup and import** on the iPhone. It sends
+an authenticated one-time request. The original Controller completes any active
+legacy write, durably retires its Wallet importer, and then acknowledges; the
+phone resumes the same journal and imports automatically. Keep Controller 2.5.0+
+open for this handoff once. It can retire the writer while bank service is paused
+without enabling bank sync or requiring the Finances backend. Lost replies are
+retried, wrong producers/requests and corrupt state stop the handoff, and a
+retired writer cannot be enabled again. Rollback to a pre-2.5.0 Controller after
+handoff is unsupported. Real Apple permission remains a user action on iPhone.
+
+Settings inventory: all six hub routes and Overview default remain. Apple Wallet
+has one direct setup entry, separate from bank pairing. Desktop folder editing,
+bank refresh, service pause/resume, host setup, pairing, unpairing and Open
+Finances remain. Mobile omits desktop-only hosting/folder editing; paired clients
+can still replace their pairing code and unpair on either platform. The previous Wallet enable toggle is intentionally retired; an already
+enabled importer retains **Stop old importer**. No UI route/disclosure state is
+persisted. Native Setting buttons keep keyboard semantics and existing wrapping
+mobile CSS. Runtime retirement is stored in the device-local finance config;
+its encrypted request/receipt use the existing paired request folder.
+
+Focused tests cover mobile/desktop actions, independent handoff/retry state and
+an in-flight legacy write. Full tests, final build/deploy/reload, visual QA and
+public release evidence are recorded in `release-notes/2.5.0.md`. Test-vault QA
+reloaded 2.5.0, inspected all six destinations, the separate bank pairing dialog,
+and the Wallet entry on desktop and a 393 px panel using Obsidian mobile
+emulation. Focus restoration and native button semantics remain intact. The
+original runtime data hash and unconfigured finance service were preserved.
+Native phone renderings and synthetic first imports were verified in TishOS;
+physical Apple account authorization remains a user/device acceptance step.
+
+
+## Calendar write-batch reduction — 2.4.3
+
+Full identity and destination checks still run, but unchanged calendar notes no
+longer enter the mutating batch. Only real property, identity, path, create and
+archive changes are applied. GCM replans the reduced batch against the same
+snapshot and must preserve every previously validated destination. Repeated
+missing-event handling also preserves an already archived note's archive date.
+This reduces interruptions from unrelated vault writers and automatic renamers;
+real source changes during an actual write batch still fail closed and need retry.
+No settings, defaults, identity formats or API requirements change.
+
+Tests cover zero write batches on settled repeat sync, a new occurrence beside
+unchanged owners, stable archive timestamps, and the existing stale-token, exact
+payload, interrupted-write and reschedule cases. Test-vault installed validation
+uses synthetic records and GCM's real planner/writer. This patch does not disable
+background services or weaken write guards. Production backfill verification is
+separate from test-vault release acceptance.
+
+Validation: 578 passing checks, three existing optional comparison skips, zero
+failures; 103 focused native-calendar checks. TypeScript and the separate final
+build passed and deployed to the test vault. Named-vault plugin reload and real
+Controller 2.4.3/GCM 3.2.1 QA verified no write batch for an unchanged repeat, one
+create-only batch beside an unchanged owner, preservation of an unrelated invalid
+note, and rejection of duplicate calendar ownership. Fixtures were archived from
+Inbox and test settings were preserved. This version is a BRAT handoff; it has not
+been installed or accepted in production.
+
+
+## Calendar creation recovery — 2.4.2
+
+Calendar reconciliation now uses GCM's optional conflict-aware snapshot capability
+(available in GCM 3.2.0). Invalid unrelated records no longer prevent all event
+creation. GCM still reserves every conflicting identity globally; Controller stops
+on canonical calendar IDs, calendar kinds, legacy calendar ownership, schedule
+stamps, or unreadable conflict evidence. It never repairs or rewrites unrelated
+notes. Older GCM versions retain the existing strict snapshot behavior; update both
+plugins for this fix. No saved setting or default changes.
+
+The snapshot and every recovery/post-write snapshot use the same guard. Regression
+coverage includes unrelated invalid records, calendar conflicts, missing diagnostic
+payloads, duplicate/blocked owners, identity reservations, and repeat-sync stability.
+Malformed YAML and unreadable vault files still stop reconciliation.
+
+
+## Calendar reliability follow-up — 2.4.1
+
+Extended testing of 2.4.0 reproduced four issues: a one-hour error near DST
+transitions without Moment Timezone, a DTEND in a different timezone using the
+start zone, unknown explicit zones becoming machine-local times, and numbered
+calendar filenames being compacted repeatedly after a sibling renamed. Real-vault
+QA also caught Controller undoing another plugin's settled filename on repeat sync.
+
+The timezone fallback now validates candidate instants on both sides of a
+transition, chooses the first repeated wall time and the pre-gap offset for an
+explicit nonexistent time, and formats midnight as hour 00. Feed-local VTIMEZONE
+remains available to detached exceptions. Unresolved explicit zones fail the feed
+rather than change meaning on another device. DURATION keeps nominal days/weeks
+separate from elapsed hours/minutes/seconds; DTEND supplies a fixed duration for
+recurrences. Existing correct filenames, including collision suffixes, remain
+stable while GCM still owns root/layout resolution. Once the imported title and
+schedule match the saved baseline, Controller adopts the settled filename instead
+of repeatedly overriding the vault's filename automation. An external title or
+schedule change still requests the new readable name. No settings or defaults change.
+The first sync can correct an affected previously imported time; with keep-old
+history enabled, that correction can retain an additional historical note.
+This is a backward-compatible patch; minimum Obsidian remains 1.12.3.
+
+The expanded [calendar reliability record](docs/calendar-sync-validation.md)
+contains the regression matrix, replay coverage, results and remaining limits.
+It includes 100 seeded permutations of 25 series; a 120-step native-record replay
+with moves, cancellations/restoration, failed downloads and manual edits; failure
+injection after all six writes of a three-event reschedule; four device timezones;
+and a 2,600-occurrence timezone/recurrence fixture. Synthetic results do not replace
+real-provider and physical-device acceptance. The app migration remains a proposal;
+this release changes Controller only.
+
+Final validation: 567 tests pass, three existing optional comparison skips, zero
+failures; TypeScript and the separate production build pass. The final 2.4.1 runtime
+was reloaded via the named test-vault CLI. Real Controller/GCM file checks passed for
+six colliding event names, title-only changes, three byte-identical repeat syncs,
+failed-feed archive safety, reschedule actions, one replacement and stale-response
+protection. GCM discovery was scoped to the synthetic folder to exclude unrelated
+intentional conflict fixtures. Existing test-vault filename automation stayed active.
+All fixtures were moved directly from Inbox to `_archive`; Controller and GCM
+settings hashes stayed unchanged and outbound automation stayed disabled. Production
+was not accessed. Release notes include the tested artifact hashes for BRAT.
+
+Validation (2026-09-23): the full declared suite, focused identity-conflict tests,
+TypeScript, and final production build pass. Test-vault CLI reload verifies the
+versioned artifacts. Installed Controller/GCM QA creates an event beside an
+incomplete unrelated record, repeats with zero creates and unchanged bytes, and
+rejects a duplicate calendar owner before writing. The unrelated note stays
+byte-identical. Synthetic fixtures were archived directly from Inbox; settings
+and outbound automation were preserved. This is a BRAT handoff, not evidence of
+production installation or user acceptance.
+
+## Deterministic calendar reschedules — 2.4.0
+
+**Calendar rules → select a calendar → On external reschedule** configures property
+updates for the **Current note** and **Retained old note** independently. Add an
+update, enter a property and value, then **Save property updates**. For example,
+set the retained note's `status` to `rescheduled`, and set the current note's
+`project` to `xyz`. Existing properties are replaced; missing properties are
+inserted. Values accept text, numbers, booleans and JSON lists of text. Updates
+apply to Native TPS event records, with GCM's existing native-record API v6.
+Old-note updates require **Keep old note when externally rescheduled**. Current-note
+updates also work with that option off, updating the existing note in place.
+
+Actions run once when the imported start, end or all-day timing changes after a
+baseline sync. Local edits, title-only changes, first import and cancellation do
+not trigger them. Repeat syncs preserve subsequent manual edits to these custom
+properties. Identity, calendar timing, recurrence and other provider-owned fields
+are protected; custom properties and workflow status are supported. Drafts are
+saved explicitly and running syncs retain their original configuration snapshot.
+No existing setting, default, command or destination was removed. The six existing
+hub destinations and Overview default remain; the editor is flat inside the
+selected calendar, with actions above rows, keyboard labels/focus and wrapping,
+stacked mobile controls. Only per-calendar `rescheduleActions` is persisted.
+
+Calendar parsing now groups components by UID before relating exceptions. The
+previous library default attached exceptions from unrelated series, and repeated
+master components could expand more than once. Controller selects the latest
+SEQUENCE/LAST-MODIFIED/DTSTAMP revision, collapses identical repeats and rejects
+conflicting equal revisions. A moved occurrence retains its original RECURRENCE-ID;
+THISANDFUTURE applies only to its own series, and an exception's copied RRULE never
+starts another series. Reordering a feed does not change the planned occurrences.
+Malformed, incomplete or expansion-limited feeds fail the fetch rather than
+appearing as successful empty/partial calendars to missing-event handling.
+Structured parser logs report components, series, exceptions, discarded revisions,
+outcome and duration without event bodies.
+
+Native records track imported revision information in `tpsCalendarSync`; older
+revisions of the same master/exception are ignored. A master and an exception have
+separate revision origins. Retained-note generation IDs derive from occurrence,
+existing history and imported timing, so retrying an interrupted retirement uses
+the same planned identity. Moving back later still creates a distinct generation.
+The existing snapshot/preflight checks reject ambiguous ownership or concurrent
+edits. Controller strips `recurrenceRule`, `recurrence` and `rrule` from imported
+native templates and reconciles those keys off managed calendar instances: the
+external feed owns their recurrence. Other properties and note content remain.
+
+**Limits:** providers must retain UID and original RECURRENCE-ID for a moved
+occurrence. Replacing a UID or rewriting an entire master schedule without
+recurrence exceptions can describe a new set of occurrences; Controller does not
+infer matching from titles or dates. Equal-rank conflicts within a feed are errors;
+across fetches, changed timing with unchanged revision metadata is still accepted
+for providers that omit revision bumps. Existing production duplicates are not
+deleted or merged. Property actions/history are native-note features; legacy notes
+and inline tasks retain their existing storage behavior. Use one Controller device.
+This backward-compatible feature warrants a minor version; Obsidian remains 1.12.3+.
+
+**Automated validation:** 553 passing tests, three existing optional comparison
+skips, zero failures; TypeScript and the production build pass. Regression tests
+cover cross-series isolation, duplicate revisions and feed order, single/range
+reschedules, UTC/TZID identity, all-day EXDATE/RDATE, failed fetches, actual parser-to-
+record reconciliation, property upserts, templates, stale responses and interrupted
+retries. The build deploys only to the test vault. Runtime/UI verification on 2026-09-23 used the named test vault after a CLI plugin
+reload to 2.4.0. The actual settings editor saved two typed property actions and the
+keep-old toggle against an isolated, disabled fixture with a stub save handler.
+Desktop controls, accessible labels and save feedback were inspected; mobile CSS
+stacks and wraps controls, but physical iPhone acceptance remains user testing.
+The real parser, Controller and GCM wrote three recurring notes in Inbox; moving
+one instance created exactly one replacement, updated the old status, inserted the
+new project, and preserved old content/path/identity. Reordered duplicate input
+created nothing and preserved a subsequent manual project edit. GCM discovery was
+scoped to the fixture folder because historical test fixtures intentionally contain
+identity conflicts. Fixtures were archived directly to `_archive`, runtime settings
+were restored, both Controller/GCM data.json hashes stayed unchanged, and automation
+remained off. No production feed, notes or settings were accessed. Artifact hashes
+are recorded in the public release notes; 2.4.0 is ready for the user's BRAT pull,
+not installed in production by this task.
+
+## Previous Wallet relay — 2.3.0 (superseded by direct iPhone import)
+
+**Advanced → Finance server → Import Apple Wallet · This device** enables the
+approved native TishOS iPhone app to send balances and transaction history to this
+Controller. Requires TPS Finances 1.8.0 in Atomic note mode and TishOS 0.17.0.
+Set up the finance host, enable Wallet import, privately copy its pairing code,
+and enter it in TishOS → Apple Wallet on one iPhone. The app separately confirms
+the named vault and asks Apple for the accounts and dates. No Plaid connection
+or credential is needed for Wallet. Existing Plaid connections stay independent.
+
+The configurable finance request folder must remain included in vault sync.
+AES-256-GCM envelopes authenticate the collection and each transfer path. A
+bounded hash manifest, immutable parts, one producer identity and increasing
+sequence prevent incomplete, altered or replayed imports. Controller durably
+claims a batch before writes and acknowledges only after Finances finishes;
+the phone commits its history cursor only after that acknowledgement. Partial
+transfers and note writes resume with the same identities. Receipts live in
+this device's SecretStorage; the Wallet toggle is local, off by default and
+preserved while paused. Missing/corrupt state pauses import rather than starting
+over. Error retries are bounded to at most one attempt per minute; ordinary
+relay polling remains every four seconds. Wallet errors do not stop bank sync.
+
+Apple IDs are device-local: use one exporting iPhone. Replacement-phone and
+lost-state migration are not automatic. Missing accounts or restricted history
+never imply deletion. Explicit deleted/rejected transactions use Finances'
+normal trash behavior. The app retires its acknowledged encrypted parts; notes
+remain ordinary vault content. Pause cannot recall transfers already delivered.
+The existing secret pairing code grants finance connection authority and must
+remain private. macOS, iPad and other vault devices read the resulting notes.
+The native app needs a Files-accessible copy of that vault; it cannot read an
+Obsidian-only iOS container. Neither background iOS refresh nor vault sync has
+a guaranteed delivery deadline.
+
+**Settings inventory:** all six hub destinations, Overview default, existing
+finance controls and commands remain. One local toggle is added alongside host
+refresh/pairing controls. Native toggle keyboard semantics and the existing
+wrapping narrow layout apply; no extra disclosure or shared setting is added.
+
+**Validation:** focused relay tests cover encryption, missing/tampered parts,
+interrupted imports, durable acknowledgement, replay, alternate producers,
+sequence gaps, disable races and a Wallet-only host without Plaid. The full suite reports 532 passes and three existing
+opt-in comparison skips (zero failures). The separate production build deploys
+only to the test vault; CLI reload verifies 2.3.0. The actual Advanced settings
+were inspected with an in-memory, disabled host fixture: all six destinations
+and prior controls remain, the new toggle is keyboard-focusable, and no real
+configuration or outbound automation was enabled. Both plugin data.json hashes
+remained unchanged. Native narrow/accessible Wallet screens were inspected. Real Apple-account authorization
+and comparison remain the user's iPhone acceptance step. This is a minor feature
+release; minimum Obsidian stays 1.12.3. Production installation is the BRAT handoff.
+
+
+Device roles, calendar synchronization, reminders, encrypted attachment sync, and shared Plaid transport.
+
+Release status: [GitHub releases](https://github.com/ZachTish/tps-controller/releases) · Obsidian 1.12.3+ · Desktop and mobile. See the current release notes for validation and BRAT handoff; publication and production installation are separate.
+
+## Install with BRAT
+
+Add `ZachTish/tps-controller` to BRAT. Use manual updates with `Latest`, or freeze an exact numeric tag for a controlled rollout. Each release supplies `main.js`, `manifest.json`, and `styles.css`; release notes record validation and artifact hashes. A published release is not evidence that any device has installed it.
+
+## Configure Controller
+
+The settings hub contains Overview (default), Calendar rules, Note rules, Reminder rules, Automations, and Advanced. Controller/User is a device role: select the device that should run shared automation. Pairing, attachment enrollment, and periodic reload preferences are local to each device.
+
+- Configure calendar sources in Calendar rules and maintenance in Automations. Calendar views themselves belong to TPS Calendar Base.
+- Configure reminder rules in Reminder rules. Inline-task eligibility can follow GCM's Atomic note/Atomic line mode, require the task's own scheduled value, or use an explicit override.
+- Configure **Advanced → Plaid** for TPS Finances 1.3.0+. Environment, credential references, and OAuth redirect URI are marked **This device**. Secret values stay in Obsidian SecretStorage. Finances owns institution linking, account records, and ledger reconciliation.
+- Attachment sync preserves local files and ordinary links. It uses encrypted GCS objects, device enrollment, and a recovery key; it is independent of Controller/User role. Markdown, Canvas, Bases, configuration, hidden files, and excluded paths stay outside this attachment collection.
+
+## Preserve externally rescheduled notes — 2.2.0
+
+In **Calendar rules**, select a calendar and enable **Keep old note when externally rescheduled**. This optional per-calendar setting defaults off and applies to **Native TPS event records**. Legacy note imports and inline Daily Note tasks retain their existing behavior. Native synchronization requires TPS GCM native-record mode/API v6; minimum Obsidian remains 1.12.3. This is a backward-compatible minor release.
+
+After a baseline sync, a feed change to an occurrence's start, end, or all-day timing keeps the previous note at its existing path with its existing identity, authored properties, status and body, and creates a fresh note for the new schedule. The new note uses the calendar's current template/defaults. Title-only changes, local note date edits and cancellation notifications do not create history. Normal feed synchronization can still overwrite a locally edited date. Existing notes without a saved baseline establish it on their first sync after enabling; Controller does not guess at earlier reschedules. Matching relies on the provider retaining the event UID and, for recurring exceptions, the recurrence identity. A changed UID is treated as a different event.
+
+Only the current generation receives subsequent updates, cancellation and missing-event handling. Retained notes stay ordinary visible notes; they are not archived automatically. Turning the option off resumes in-place updates on the current generation while leaving history alone. Moving an event back to an earlier time creates another distinct note. GCM allocates collision-safe filenames. The reserved `tpsCalendarSync` frontmatter object stores the opaque logical occurrence ID and last imported timing; `retired: true` marks retained history. Do not remove or edit this tracking data. It follows vault sync, survives restarts, and is stripped from copied template defaults. Ambiguous active generations or cross-source ownership stop the batch before mutation.
+
+Creation/template/property planning completes before retiring a note. GCM's existing snapshot-bound batch protects against concurrent edits; if an interruption occurs after retirement, a later sync creates the missing current generation without reclaiming history. This is not a cross-device transaction: use the designated Controller device for automatic sync. The setting is editable alongside the calendar's existing controls without adding a new route, disclosure, command or navigation state; the existing mobile settings layout applies. Physical iPhone acceptance remains user testing.
+
+Focused regression coverage includes external versus local edits, default-off and baseline behavior, repeated moves, cancellation/restoration, template preservation, recurring exceptions, filtered events, missing-event handling, disabling the option, interrupted retries and ambiguous ownership. Validation on 2026-09-20: 523 checks passed, with three existing optional skips; TypeScript, the separate production build, test-vault deployment and plugin reload passed. The actual settings checkbox was toggled on a synthetic disabled calendar using an isolated save handler, leaving real settings unchanged. A synthetic feed exercised the real Controller and GCM services against Inbox files: a local date edit created no duplicate, an external reschedule preserved the old note's body/status/path/ID and created a new note, and a repeat sync remained idempotent. Existing unrelated identity-conflict fixtures blocked a whole-vault snapshot, so file-level QA scoped GCM discovery to the synthetic folder; normal global conflict safeguards remain unchanged. Background filename automation was allowed to settle between checks. All fixtures were archived directly into _archive. No external feed or production vault was accessed. Artifact hashes are recorded in the release notes.
+
+## Command-driven note rules — 2.0.0
+
+**Note rules** replaces the per-calendar automatic Tag control. This is a major release because calendar synchronization deliberately stops appending that tag. Existing tags remain. Old configured calendar tags become manual rules scoped to their recognized calendar source; their old setting remains retained but inactive. Invalid legacy tag drafts are retained disabled for review. Atomic calendar IDs and legacy calendar external IDs identify those notes. Inline checkbox tasks are not edited by this feature.
+
+Create and save rules in **Controller → Note rules**. Run **TPS Controller: Preview Note Rules on Current Note** or **Preview Note Rules on Notes**, choose a note, folder (including descendants), or the entire vault, inspect the proposed changes, select notes, then Apply. Both Controller and User devices can run these commands. No creation, edit, startup, or import trigger invokes rules, and opening settings does not scan notes. No Finances, Health, or companion update is needed.
+
+Example: match **Property → type → is → event** and **Note name → contains → xyz**, then **Set title and filename → 123**. The title action updates Controller's configured title property and renames the file in its existing folder through Obsidian's file manager. Existing internal links follow Obsidian's own link-update preference. Other actions replace literal title text, set/remove a custom property, or add/remove one tag. Property values accept text, numbers, booleans, and JSON lists of text. No scripts, regular expressions, filesystem moves, body edits, or note deletion are available.
+
+Rules run in displayed order. Conditions always evaluate the original note, text comparisons ignore case, and title replacement is literal and case-sensitive. All/any conditions, existence/emptiness, numeric greater/less comparisons, list membership through equality, enable/disable, reordering, and stop-after-match are supported. Later actions win. Missing fields do not satisfy negative comparisons. The configured title property falls back to the filename only when absent/empty; **Note name** always means filename. Ordinary property names are explicit and configurable, including type/kind. IDs and GCM's configured identity/schema keys and identity tag prefixes cannot be rewritten; a configured title property cannot alias tags or a record identity. Conditions using **Calendar source ID** are primarily used by the migrated calendar-tag rules.
+
+**Safeguards and limits:** preview reads current disk content, never stale metadata. Hidden/internal, development, dependency, archive and trash paths are excluded; GCM-protected templates, malformed/ambiguous YAML, and notes above 2 MiB are reported as skipped. Renames cannot cross folders, use unsafe filenames, overwrite existing paths, or collide by case/Unicode normalization. Competing destinations are flagged before writes. Exact content fingerprints and a frozen settings snapshot are checked before application, then again at the write boundary. A stale selected note rejects the initial batch. Only one preview/application runs per device; Controller periodic reload waits for it. Renames may update links in other selected notes; any subsequently stale note is reported for a new preview.
+
+Application is per note, not a vault-wide transaction or a cross-device lock. A late disk/sync error reports unfinished work and never overwrites a collision. If properties save but a rename fails, the result says so; a fresh preview can finish the rename. Reusing a consumed or edited preview is rejected. Note bodies are preserved, though normal YAML serialization can reformat frontmatter and its comments. There is no Controller undo/history layer. A subsequent provider import can restore provider-owned values; manual rules do not override that import or run again automatically. Existing authored/template tags are not removed by retiring the calendar tag action.
+
+**Settings contract:** all five existing destinations, commands, and unrelated controls remain; Note rules is the sixth destination. Add/Save/Reload/Preview actions precede the ordered rule list. Only one selected editor is visible, with flat condition/action rows and no nested disclosures. Draft edits and selected-rule/focus state are transient; only explicit Save persists the versioned shared `noteRules` configuration. Configuration changes do not mutate notes. Save, preview, and application reject stale rules when the saved configuration changed on disk; Reload saved rules explicitly refreshes it. The preview has one optional disclosure for skipped notes, paginates change cards in groups of 50, and preserves selections. Native labeled controls, pressed-state route/rule buttons, live status, visible focus, wrapping action bars, and stacked fields serve keyboard and narrow layouts. No settings navigation state is persisted.
+
+Focused regressions exercise matching/order, migration, identity protection, YAML/body preservation, selection, collisions, stale or altered plans, races, partial rename failures, template protection, source resolution, and command-only wiring. The complete suite and a separate final production build/deploy are required before the BRAT release. Validation on 2026-09-18: the full suite passes 509 tests with three existing optional historical-comparison skips; 30 focused rule tests pass. A legacy Daily Note timing fixture now compiles its module before starting the simulated creation clock. TypeScript and the mandatory separate production build pass and deploy to the isolated test vault. The final version is reloaded there. All six settings destinations were inspected without changing unrelated settings or enabling outbound automation. Keyboard Save and Apply, a 400-pixel settings content pane, and a 390-pixel preview were checked in the UI. A synthetic event was renamed to 123.md, preserving its ID, tags and body; Obsidian updated its backlink, and an unrelated note was unchanged. A colliding second note was blocked. Fixtures were moved from Inbox to _archive, original rules restored, viewport overrides cleared, and the hash of all unrelated Controller settings remained unchanged. Physical iPhone/iPad testing is not implied by desktop viewport emulation.
+
+## Configurable finance request folder — 1.5.0
+
+**Advanced → Finance server → Request files folder** accepts a vault-relative folder such as `_system/TPS Finance Relay` or `_system`. The default remains `_assets/TPS Finance Relay`. This is a backward-compatible minor release; minimum Obsidian remains 1.12.3. The setting is local to each device's finance pairing. New host setup uses the entered folder; an existing host offers **Move files**. The move relocates only its `<collection-id>` subfolder. Other `_assets` content is untouched.
+
+Before changing an existing connection, pause finance service on each device and allow vault sync to settle. Move it on the desktop host, export its new pairing code, then use **Update pairing code** on each client before resuming. Install Controller 1.5.0 on every participant first. Keep the destination included in vault sync. Reusing the same connection code updates the folder while preserving that client's device identity, key, pending requests, and pause state. Old codes without a folder retain the default. A different connection/key is rejected without replacing the existing pairing. A stale client left on the old folder cannot discover the move automatically and may recreate transport files there.
+
+The host records its intended move before renaming. Restart completes a pending move without resetting the connection. Unsafe paths, file collisions, missing move sources, and ambiguous destinations stop the operation; existing files are never overwritten. Configuration remains editable while paused. Credentials and the operation journal remain device-local. AI request folders belong to TPS AI Gateway and have a separate setting.
+
+The hub/default route, existing disclosures and controls remain unchanged. The new native text field and action stay in Advanced; paired clients show the current folder with an Update pairing code action. Focused transport regressions cover custom/legacy pairing, pending operations across a move, Unicode paths, unsafe paths/collisions, disk failure, restart after rename, and disabled-service editing.
+
+Validation on 2026-09-18: all 20 focused finance transport checks pass. The full suite passes 479 checks with three existing optional historical-comparison skips. TypeScript and the production build pass. The versioned test runtime was reloaded; Advanced shows the editable folder while user-role hosting stays disabled. A synthetic real-adapter connection moved its collection beneath an Inbox fixture while paused, preserving the journal and status file; the fixture was archived afterward. No bank provider was called. Original device-local pairing and runtime data hashes were unchanged. Narrow layout behavior uses the existing settings CSS; physical mobile acceptance is not inferred from desktop QA.
+
+## Shared finance server — 1.4.0
+
+Install **Controller 1.4.0 and Finances 1.4.0** on every participating device. On the always-running desktop, choose the **Controller** role in Overview, configure **Advanced → Plaid**, then choose **Advanced → Finance server → Use this Controller**. Use the desktop that already owns your bank connections; its tokens and identity map stay in local SecretStorage. Do not independently reconnect the same banks on other devices.
+
+Choose **Show pairing code**, then enter that code under the same Finance server settings on your iPhone, iPad, or other desktop. Pairing is explicit and local to each device. The code grants control of the shared finance connection; keep it private. Clients need no Plaid secret. Finances → Connections handles Connect, Reconnect, Sync, Disconnect, and resumable sign-in requests. The Controller settings handoff opens that destination directly.
+
+The Controller remains the only bank importer. Phones open [Plaid Hosted Link](https://plaid.com/docs/link/hosted-link/) in their browser and return to Obsidian after signing in; the desktop retrieves completion through `/link/token/get`. No localhost callback, listening port, public tunnel, webhook receiver, or additional hosted server is required. The default scheduled refresh is every 15 minutes; manual-only, 30-minute, hourly, six-hour, and daily intervals are available. This retrieves data Plaid has available; it does not force the bank itself to update or request a paid Transactions Refresh.
+
+**Transport and recovery:** vault sync carries AES-256-GCM-encrypted Markdown envelopes under `_assets/TPS Finance Relay/<collection-id>/`. Keep that folder included in the vault's sync. The queue works with ordinary Markdown synchronization; there is no direct device-to-device network dependency. Unique per-message nonces authenticate collection and path. Each client owns immutable request files; one pinned host owns responses and presence. Credentials, access tokens, Link tokens, and the durable operation journal stay in device-local SecretStorage. Envelopes contain encrypted actions, shared institution summaries, and short-lived hosted sign-in URLs—not plaintext bank tokens. Ledger notes still use your normal vault sync and its privacy settings.
+
+Reconciliation polls every four seconds after the workspace is ready, has one active operation chain per local app (including reloads), and preserves pending requests before publishing them. Presence updates every 30 seconds and becomes stale after 90 seconds. Missing/corrupt local state or failed authentication pauses processing. Imports retain existing finance identities/cursors and refresh shared Finances settings before each run. Reconnect retains the existing Item. An uncertain public-token exchange is never automatically repeated: the host checks its saved receipt, otherwise reports an uncertain result for review. Network retries use bounded backoff; an already-created sign-in survives polling outages within its six-hour result-recovery window. Unstarted requests expire after 30 minutes; completed transport files are retired after their retention window. Receipt expiry prevents old synced requests from resurrecting.
+
+**Limits:** Obsidian and vault sync must be running on the awake Controller. This is not an OS background daemon, instant push channel, high-availability cluster, or automatic host failover. Mobile must receive the encrypted response through vault sync before its sign-in button appears. Bank login/consent happens in the user's browser, not inside Obsidian. Restore the host's local bank state after loss; do not recreate a connection over an empty identity map. A client can unpair and enter a corrected code; unpairing does not disconnect banks or cancel requests already delivered. Existing independent connections on other desktops are not migrated or merged automatically. Production OAuth access still depends on the user's Plaid account and institution support.
+
+**Settings contract:** the existing Overview, Calendar rules, Reminder rules, Automations, and Advanced hub is retained, with Overview the default. Finance setup extends Advanced without another nested disclosure. Host setup, pairing export/import, pause/resume, interval, status refresh, client unpair, and the Finances handoff are device-local controls; existing Plaid environment/secret references/OAuth controls remain. Pairing text is shown only in a dedicated modal. Buttons and inputs are native and keyboard accessible; existing narrow settings layout applies. No existing shared settings, commands, or note property names are removed.
+
+**Validation:** 16 isolated transport tests cover independent devices, encrypted payloads, path replay/tampering, double taps, bounded retry, resume, late completion, uncertain exchanges, missing/corrupt state, role/pause guards, response repair, cleanup, unpair, and reload serialization. Finances adds hosted-provider and complete mobile-bundle coverage. A real Sandbox Hosted Link browser run completed the synthetic First Platypus OAuth flow and imported four account notes and 241 transaction notes in an isolated Inbox fixture. Desktop and mobile-emulated settings/request UI are checked after the final versioned build. Physical iPhone/iPad and real-bank acceptance remain device testing, not a claim made from desktop emulation. Test artifacts deploy only to the test vault; production installation is the user's BRAT pull.
+
+## Integration and limits
+
+The enabled plugin exposes `api.plaid` version 1 and `api.openPlaidSettings()`. Plaid requests are restricted to supported environments and endpoints. Unpaired devices retain the earlier direct Plaid transport. An explicitly configured finance host adds the shared service described below.
+
+TishOS companion pairing is separate on every device. A published reminder schedule is not proof of physical notification delivery. Attachment sync's required large-file iPhone/iPad transfer acceptance remains a release gate; desktop or simulated tests do not establish mobile readiness. Bucket retention/soft-delete policies are independent of Controller cleanup. The old public-link uploader is retired.
+
+See [historical implementation and validation reference](REFERENCE.md) for the detailed calendar, reminder, attachment, and migration contracts. Earlier entries describe their release at that time, not additional features of the current UI.
+
+## Development and repository policy
+
+`main` is the stable source line. Numeric tags identify immutable released artifacts. `optimization` is an unreleased work-in-progress lane; do not install it through BRAT or merge it into stable without separate validation.
+
+The supported build lives inside `Obsidian Plugin Test Vault/Plugin Development`, with `TPS-Controller (Dev)` as the mapped stable source. These repositories depend on adjacent shared tooling including `deploy-runtime.mjs`; a standalone clone is not currently self-contained.
+
+From the contained workspace, prepare dependencies using the shared helper, then run tests and a separate final build:
+
+```sh
+# From Plugin Development:
+node ./prepare-dependencies.mjs "TPS-Controller (Dev)"
+cd "TPS-Controller (Dev)"
+npm test
+npm run build
+```
+
+Dependencies stay in the vault's `.plugin-dev-cache.nosync` through a relative `node_modules` symlink. Use a clean, current checkout; preserve unrelated changes and never build an old dirty worktree into the test runtime. Stable builds deploy only shipped artifacts to the test vault. Optimization builds are build-only. Runtime `data.json`, secrets, caches, and session state never belong in Git.
+
+Documentation-only maintenance does not create a new plugin version. Published release tags and assets are preserved. Do not rely on legacy version/release scripts without reviewing their current behavior. Production updates remain the user's BRAT handoff.
+
+For prior feature details and release-specific evidence, see [REFERENCE.md](REFERENCE.md) and [GitHub releases](https://github.com/ZachTish/tps-controller/releases). The September 16 cleanup changes documentation and repository metadata, not shipped behavior.
+
+
+## 2.1.0 — Confirmed current mappings
+
+Advanced calendar title, status, previous-status, start and duration fields are drafts until Apply. GCM 3.0.0 supplies preview, confirmation, migration and recovery through propertyMappings v1. Matching enabled Calendar and Health mappings update with the GCM property references. Missing/older GCM blocks the change without saving. Calendar auto-creation pauses during an active mapping migration; an already-running sync prevents migration from starting.
+
+Minor: adds confirmed migration to existing mapping controls. Existing navigation destinations, default routes, disclosures, commands, and persisted UI-state contract are unchanged. Mapping controls are plain inputs with an explicit Apply action and wrapping layouts; no alias editor is added. Cancel preserves the current mapping and notes.
+
+Shared migrations change Markdown frontmatter only, preserve note bodies, reject occupied destinations and stale previews, and keep a local recovery copy until success. Inline fields, Base formulas, per-view configuration, and disabled plugins are not automatically rewritten; enable participating TPS plugins before a shared rename. Review historical records before relying on totals after upgrading. Health timing migration uses its existing guarded rollback flow; a process crash cannot provide a vault-wide atomic transaction. No migration or outbound service runs merely because the plugin is upgraded.
+
+Validation covers current-only reads, migration-only historical inputs, cancellation, archived notes, conflicts, stale previews, save/write rollback, cross-plugin setting changes and identity protection. Required final validation: full declared suite, separate production build to the test vault, named plugin reload and settings confirmation checks. UI and final test results are recorded in the release notes. Minimum Obsidian compatibility is unchanged. Update GCM before applying Controller or Calendar mapping changes. The release is a BRAT handoff; production installation remains user-controlled.
+
+Full declared suite: 509 checks passed, 3 optional/existing checks skipped, zero failed. TypeScript and separate final production builds pass and deploy only shipped artifacts to the test vault; targeted plugin reloads verify the installed versions. Test-vault validation (2026-09-20): Controller’s real Apply dialog previewed one synthetic Markdown note and two plugin mappings. Cancel preserved both mappings and the original file; confirming renamed the property and updated Controller and Calendar together, preserved the body, restored input focus, and removed temporary recovery. Original settings were restored and the fixture archived. GCM’s current kind key and migration controls were inspected. Calendar’s five rendered key inputs and Apply actions were verified. Health’s timing inputs were checked; an existing archived QA note with potentially relevant malformed frontmatter correctly blocked migration with a path-specific error and no changes. Successful Health confirmation, timing conversion, cancellation and rollback are covered by regression tests. No outbound automation was enabled. Existing mobile CSS/layout is retained; physical iOS testing remains user acceptance.
+
+## 2.6.1 — Two-level frontmatter kinds
+
+GCM owns the configured record classifications. Its existing `nativeRecordKindPropertyKeys` map accepts either a key string (unchanged behavior) or `{key, value, parentKind}`, for example a food-entry record mapped to `{key: "transactionKind", value: "food-entry", parentKind: "transaction"}`. These mappings are opt-in; upgrading never changes notes or classification settings automatically. The additive `api.frontmatterKinds` v1 exposes encode/decode/definition for domain writers. Canonical record IDs and internal domain kinds remain stable while notes store the selected parent and subtype. Current mappings are authoritative; this adds no watcher, automatic repair, or startup migration.
+
+Health library-note creation uses that shared encoding; logged records continue through GCM's record writer. Finances uses it at its existing property read/write boundary for imports, manual entries, updates and generated Base filters, retaining its canonical internal finance types. Controller omits an unsolicited `status: scheduled`; explicit template statuses and cancellation statuses are preserved, and cancellation restoration can return status to absent. Calendar identity remains its stable ID while public kind/subkind fields belong to the note/template.
+
+The user's one-time taxonomy migration is separate from shipped plugin behavior. It must update settings, existing notes, templates, embedded/standalone Base filters and presentation/hide rules together, with conflict checks, source snapshots and preserved identifiers/bodies. Empty optional properties are not created by the classification mapping. GCM custom-property definitions govern the properties panel; removing specialized nutrition/finance definitions does not delete their stored data. Existing settings destinations, disclosures and mobile layouts are unchanged. Physical iPhone acceptance remains outstanding. Full test/build and test-vault verification results are recorded in release notes.
+
+Validation for 2.6.1 (2026-09-26): 592 checks passed; 3 explicitly skipped by the existing suite; TypeScript and production build passed. The installed test-vault plugins were reloaded by manifest ID after refreshing manifests. Synthetic API creation/update checks verified food-entry parent/subtype encoding, stable IDs, calendar template classifications, preserved calendar body and absent status, plus finance encoding/decoding. Temporary in-memory classification/root settings were restored without saving, and fixtures moved directly from Inbox to `_archive/Taxonomy QA 2026-09-26`. No external provider was called. Focused finance tests additionally cover investment round trips and dotted Base expressions with renamed keys. Final separate build/deployment and artifact hashes are recorded in the release notes.
+
+
+## 2.6.2 — Reduce repeated notification calculations
+
+Native notification publication serializes each candidate's comparison key once and groups occurrences by series before hashing audit identities. Previously the series audit hashed the same series once per repeat, including thousands of occurrences that could not fit the 128-item schedule. Every occurrence still participates in the existing selected-series due-time/cadence validation; conflicts beyond the selected 128 items still fail. Chronological/UTF-8 ordering, duplicate handling, live-series fairness, signatures, completion/snooze behavior, repeat cadence, horizon and refresh triggers are unchanged. No reminder setting, persisted cache, watcher, repair loop or note migration is added.
+
+GCM 3.5.1 separately removes repeated property-profile resolution from Controller's full-vault event-matching path; install both patches for the measured improvement. Controller still projects up to 128 repeats per reminder and rebuilds the event-match index. This patch removes demonstrated redundant work without introducing an index invalidation scheme or changing notification policy.
+
+Validation includes the command-bridge suite and a 21,504-candidate regression whose complete item/audit hash matches the installed 2.6.1 output; it also exercises duplicate candidates and inconsistent unselected repeats. Required validation is `npm test`, a separate `npm run build`, test-only deployment and targeted reload. Installed benchmarks directly call the pure item/audit builders with synthetic inputs; no pairing, credentials, external provider or outbound publication is used. Results and artifact hashes are recorded in release notes. Minimum Obsidian remains 1.12.3. This backward-compatible performance fix is a patch release; physical iPhone timing and production BRAT installation are separate.
+
+Installed test-vault validation on 2026-09-26: the identical 21,504-candidate synthetic workload produced the same 128 items, one series and SHA-256 output digest before/after. Audit generation fell from 588.9 ms to 10.1 ms; item selection fell from 56.8 ms to 46.6 ms. These are one desktop before/after sample, not a device guarantee. All 593 declared-suite tests passed, with three existing optional historical-comparison tests skipped because no comparison checkout was configured. TypeScript and the separate production build passed. Targeted reload loaded 2.6.2. The clock override was restored, no publication was invoked, and runtime `data.json` remained byte-identical. No production artifacts or settings were changed.
+
+<!-- Startup implementation verification: 2026-10-08 -->
+
+Installed foreground interaction QA also clicked Navigator New note in a unique Inbox scope, opened the created item through normal Navigator selection, typed with the native keyboard and saved. Exactly one note was created; the visible body and saved source contained the typed marker. The trace counted 16 raw reads, 31 cached reads, one inventory, two process attempts and one modify across setup/creation/navigation/input inspection. The original leaf/query were restored and the owned fixture was archived byte-identically. This is a correctness check, not first-input latency or a controlled navigation benchmark.
+
+Final post-documentation verification: the separate ordinary production build passed, reported `target=test` with unchanged runtime bytes, and retained the already-loaded and QA-verified numeric version. Public release artifacts must match the SHA-256 receipt above. Production installation, full quit/reopen and vault-close/reopen comparisons, single-versus-two-window production profiling, first-use input latency and physical mobile acceptance remain rollout verification gates.

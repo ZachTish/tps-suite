@@ -1,0 +1,9 @@
+{
+  "id": "tps-suite",
+  "name": "TPS Suite",
+  "version": "0.1.0",
+  "minAppVersion": "1.12.3",
+  "description": "Modular TPS suite \u2014 development foundation, migration not enabled.",
+  "author": "Zach Tisherman",
+  "isDesktopOnly": false
+}

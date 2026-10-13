@@ -1,0 +1,22 @@
+export const DEFAULT_DAILY_NAV_DAY_COUNT = 0;
+
+export function normalizeDailyNavDayCount(value: unknown): number {
+  if (value === null || value === undefined) return DEFAULT_DAILY_NAV_DAY_COUNT;
+  const text = typeof value === 'string' ? value.trim() : null;
+  if (text === '') return DEFAULT_DAILY_NAV_DAY_COUNT;
+  const parsed = typeof value === 'number' ? value : Number(text ?? value);
+  if (!Number.isFinite(parsed)) return DEFAULT_DAILY_NAV_DAY_COUNT;
+  return Math.min(7, Math.max(0, Math.floor(parsed)));
+}
+
+/**
+ * Returns day offsets relative to the active Daily Note.
+ * Automatic (zero) renders five days; CSS keeps the centered subset that fits.
+ * Fixed ranges stay contiguous around the opened day, with the extra day on
+ * the left for even counts.
+ */
+export function getDailyNavDayOffsets(dayCount: unknown, _activeIsoWeekday?: unknown): number[] {
+  const normalizedCount = normalizeDailyNavDayCount(dayCount) || 5;
+  const firstOffset = -Math.floor(normalizedCount / 2);
+  return Array.from({ length: normalizedCount }, (_, index) => firstOffset + index);
+}

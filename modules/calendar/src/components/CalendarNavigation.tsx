@@ -1,0 +1,233 @@
+import React, { useCallback, useRef } from "react";
+
+interface CalendarNavigationProps {
+  showNavButtons?: boolean;
+  navigationLocked?: boolean;
+  canNavigatePrev?: boolean;
+  canNavigateNext?: boolean;
+  canNavigateToday?: boolean;
+  navigationBoundsStart?: Date;
+  navigationBoundsEnd?: Date;
+  headerTitle: string;
+  visibleEventCount: number | null;
+  currentDate?: Date;
+  onDateChange?: (date: Date) => void;
+  onPrevClick: () => void;
+  onNextClick: () => void;
+  onToday: () => void;
+  mobileNavHidden: boolean;
+  floatingNavStyle: React.CSSProperties;
+  mode?: "embedded" | "dedicated";
+}
+
+export function shouldRenderCalendarNavigation(
+  showNavButtons: boolean | undefined,
+  visibleEventCount: number | null,
+  mobileNavHidden: boolean,
+): boolean {
+  return !mobileNavHidden && (showNavButtons === true || visibleEventCount !== null);
+}
+
+export function formatVisibleEventCountLabel(visibleEventCount: number): string {
+  return `${visibleEventCount} visible ${visibleEventCount === 1 ? "event" : "events"}`;
+}
+
+/**
+ * Embedded calendars use compact floating navigation. Dedicated Base tabs keep
+ * navigation in document flow so it never covers the calendar grid.
+ */
+export const CalendarNavigation: React.FC<CalendarNavigationProps> = ({
+  showNavButtons,
+  navigationLocked = false,
+  canNavigatePrev = true,
+  canNavigateNext = true,
+  canNavigateToday = true,
+  navigationBoundsStart,
+  navigationBoundsEnd,
+  headerTitle,
+  visibleEventCount,
+  currentDate,
+  onDateChange,
+  onPrevClick,
+  onNextClick,
+  onToday,
+  mobileNavHidden,
+  floatingNavStyle,
+  mode = "embedded",
+}) => {
+  const prevDisabled = navigationLocked || !canNavigatePrev;
+  const nextDisabled = navigationLocked || !canNavigateNext;
+  const todayDisabled = navigationLocked || !canNavigateToday;
+  const datePickerDisabled = navigationLocked;
+  const navDateInputRef = useRef<HTMLInputElement | null>(null);
+  const formatDateInputValue = useCallback((value?: Date) => {
+    if (!value) return undefined;
+    const d = new Date(value);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  const handleDateInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (navigationLocked) return;
+      if (!e.target.value) return;
+      const [y, m, d] = e.target.value.split("-").map(Number);
+      let nextDate = new Date(y, m - 1, d);
+      if (navigationBoundsStart) {
+        const min = new Date(navigationBoundsStart);
+        min.setHours(0, 0, 0, 0);
+        if (nextDate.getTime() < min.getTime()) {
+          nextDate = min;
+        }
+      }
+      if (navigationBoundsEnd) {
+        const max = new Date(navigationBoundsEnd);
+        max.setHours(0, 0, 0, 0);
+        if (nextDate.getTime() > max.getTime()) {
+          nextDate = max;
+        }
+      }
+      if (onDateChange) onDateChange(nextDate);
+    },
+    [navigationLocked, onDateChange, navigationBoundsStart, navigationBoundsEnd],
+  );
+
+  const showNavigation = showNavButtons === true;
+  if (!shouldRenderCalendarNavigation(showNavButtons, visibleEventCount, mobileNavHidden)) {
+    return null;
+  }
+
+  const isEmbedded = mode === "embedded";
+  const navigationClassName = isEmbedded
+    ? "bases-calendar-floating-nav"
+    : "bases-calendar-top-nav";
+  const visibleEventCountLabel = visibleEventCount === null
+    ? null
+    : formatVisibleEventCountLabel(visibleEventCount);
+
+  return (
+    <div
+      className={`${navigationClassName}${showNavigation ? "" : " bases-calendar-nav--count-only"}`}
+      style={isEmbedded ? floatingNavStyle : undefined}
+    >
+      {showNavigation && (
+        <div style={{ position: "relative", display: "flex", minWidth: 0, flex: "0 1 auto" }}>
+          <button
+            className="bases-calendar-title-text"
+            style={{
+              cursor: "pointer",
+              fontWeight: 600,
+              fontSize: "0.9rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              minWidth: 0,
+              maxWidth: "100%",
+              background: "transparent",
+              border: "none",
+              padding: 0,
+              pointerEvents: "auto",
+              opacity: datePickerDisabled ? 0.5 : 1,
+            }}
+            title="Jump to date"
+            onClick={() => {
+              if (datePickerDisabled) return;
+              const input = navDateInputRef.current;
+              if (!input) return;
+              if (currentDate) {
+                input.value = formatDateInputValue(currentDate) || "";
+              }
+              if (typeof (input as any).showPicker === "function") {
+                (input as any).showPicker();
+              } else {
+                input.click();
+              }
+            }}
+          >
+            <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{headerTitle}</span>
+            <span style={{ fontSize: "0.6em", opacity: 0.7, flexShrink: 0 }}>&#9660;</span>
+          </button>
+        </div>
+      )}
+
+      {visibleEventCount !== null && (
+        <span
+          className="bases-calendar-visible-event-count"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          aria-label={`${visibleEventCountLabel} in calendar`}
+          title="Events visible in this calendar range"
+        >
+          {visibleEventCountLabel}
+        </span>
+      )}
+
+      {showNavigation && (
+        <>
+          <input
+            ref={navDateInputRef}
+            type="date"
+            style={{
+              position: "absolute",
+              opacity: 0,
+              width: "1px",
+              height: "1px",
+              pointerEvents: "none",
+            }}
+            tabIndex={-1}
+            min={formatDateInputValue(navigationBoundsStart)}
+            max={formatDateInputValue(navigationBoundsEnd)}
+            onChange={handleDateInputChange}
+          />
+
+          <div
+            style={{
+              width: "1px",
+              height: "16px",
+              background: "var(--background-modifier-border)",
+              margin: "0 2px",
+            }}
+          />
+
+          <button
+            className="bases-calendar-nav-button"
+            onClick={onPrevClick}
+            title="Previous"
+            disabled={prevDisabled}
+            style={{ pointerEvents: "auto", opacity: prevDisabled ? 0.5 : 1 }}
+          >
+            &#8249;
+          </button>
+          <button
+            className="bases-calendar-nav-button"
+            onClick={onToday}
+            disabled={todayDisabled}
+            style={{
+              fontSize: "0.8rem",
+              padding: "2px 8px",
+              pointerEvents: "auto",
+              opacity: todayDisabled ? 0.5 : 1,
+            }}
+          >
+            Today
+          </button>
+          <button
+            className="bases-calendar-nav-button"
+            onClick={onNextClick}
+            title="Next"
+            disabled={nextDisabled}
+            style={{ pointerEvents: "auto", opacity: nextDisabled ? 0.5 : 1 }}
+          >
+            &#8250;
+          </button>
+        </>
+      )}
+    </div>
+  );
+};

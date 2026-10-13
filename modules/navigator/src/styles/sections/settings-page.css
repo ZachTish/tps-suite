@@ -1,0 +1,462 @@
+/* Source: src/styles/sections/settings-page.css */
+
+/* ========================================================================
+   Settings Page Styles
+   ======================================================================== */
+
+/* Settings layout root */
+.nn-settings-tab-root {
+    display: block;
+    min-height: 0;
+}
+
+.nn-settings-tab-root .setting-group.nn-settings-lifecycle-group {
+    display: none;
+}
+
+.nn-settings-tab-root .setting-group.nn-settings-lifecycle-group + .setting-group {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+
+/* Settings section header spacing */
+.nn-settings-tab-root .setting-item-heading {
+    margin-top: 30px;
+}
+
+/* First settings header - no top margin */
+.nn-settings-tab-root .setting-item-heading:first-child {
+    margin-top: 0;
+}
+
+.nn-settings-legacy-titlebar {
+    padding-inline: 0;
+}
+
+.nn-settings-legacy-titlebar .setting-item-name {
+    display: flex;
+    align-items: center;
+    gap: var(--size-2-2);
+}
+
+.nn-settings-legacy-page-link:focus-visible {
+    outline: 2px solid var(--background-modifier-border-focus);
+    outline-offset: -2px;
+}
+
+/* Utility class for conditionally hidden settings */
+.nn-setting-hidden {
+    display: none;
+}
+
+.nn-setting-warning {
+    color: var(--text-error);
+    font-weight: 600;
+}
+
+.nn-setting-calendar-pattern-example-text {
+    font-size: inherit;
+    font-weight: var(--font-semibold);
+}
+
+.nn-setting-property-keys-count-line {
+    margin-top: var(--size-2-1);
+}
+
+.nn-setting-property-keys-summary-text {
+    font-size: inherit;
+    font-weight: var(--font-semibold);
+}
+
+/* Sync mode toggle button (cloud/device) */
+.nn-setting-sync-toggle {
+    color: var(--text-muted);
+    opacity: 0.85;
+}
+
+.nn-setting-sync-toggle:hover {
+    color: var(--text-normal);
+    opacity: 1;
+}
+
+/* Container for additional info below settings */
+.nn-setting-info-container {
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.nn-setting-info-list ol {
+    margin: 6px 0 0 1.5em;
+    padding: 0;
+}
+
+.nn-setting-info-list li + li {
+    margin-top: 4px;
+}
+
+.nn-setting-text-count-warning-header {
+    display: flex;
+    align-items: center;
+    gap: var(--size-2-2);
+    margin-bottom: var(--size-2-2);
+}
+
+.nn-setting-text-count-warning-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--text-warning);
+}
+
+.nn-setting-text-count-warning-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Wider text inputs for settings that benefit from more space */
+.nn-setting-wide-input input[type='text'],
+.nn-setting-wide-input textarea {
+    width: 300px;
+    max-width: 100%;
+}
+
+.nn-toolbar-visibility-control {
+    width: 100%;
+}
+
+.nn-setting-color-preview {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-inline-end: var(--size-2-2);
+}
+
+.nn-setting-color-swatch-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    padding: 0;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.nn-setting-color-swatch-button:hover {
+    border-color: var(--text-muted);
+}
+
+.nn-setting-color-swatch-button.nn-setting-color-swatch-button-dark {
+    background: #111827;
+    border-color: #374151;
+}
+
+.nn-setting-color-swatch-button.nn-setting-color-swatch-button-dark:hover {
+    border-color: #4b5563;
+}
+
+.nn-setting-color-copy-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.nn-setting-color-copy-button:hover {
+    color: var(--text-normal);
+}
+
+.nn-setting-color-swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    box-sizing: border-box;
+}
+
+.nn-toolbar-visibility-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--size-2-3);
+}
+
+.nn-quick-actions-control {
+    display: flex;
+    align-items: center;
+    gap: 0;
+}
+
+.nn-quick-actions-buttons,
+.nn-toolbar-visibility-grid-scroll {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+}
+
+.nn-toolbar-visibility-grid-scroll {
+    justify-content: flex-end;
+}
+
+.nn-quick-actions-buttons.is-disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.nn-quick-actions-master-toggle {
+    margin-inline-start: auto;
+}
+
+button.nn-toolbar-visibility-toggle.nn-mobile-toolbar-button {
+    position: relative;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+}
+
+button.nn-toolbar-visibility-toggle.nn-mobile-toolbar-button:not(.nn-mobile-toolbar-button-active) {
+    opacity: 0.6;
+}
+
+button.nn-toolbar-visibility-toggle.nn-mobile-toolbar-button.nn-mobile-toolbar-button-active {
+    color: var(--nn-theme-mobile-toolbar-button-active-icon-color);
+    background-color: var(--nn-theme-mobile-toolbar-button-active-bg);
+}
+
+button.nn-toolbar-visibility-toggle.nn-mobile-toolbar-button.nn-mobile-toolbar-button-active .nn-toolbar-visibility-icon {
+    color: var(--nn-theme-mobile-toolbar-button-active-icon-color);
+}
+
+button.nn-toolbar-visibility-toggle.nn-mobile-toolbar-button.nn-mobile-toolbar-button-active svg:not(.nn-vault-icon-svg) {
+    stroke: var(--nn-theme-mobile-toolbar-button-active-icon-color);
+    stroke-width: 2;
+}
+
+.nn-toolbar-visibility-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    color: var(--nn-theme-foreground);
+}
+
+.nn-toolbar-visibility-icon svg:not(.nn-vault-icon-svg) {
+    width: 18px;
+    height: 18px;
+    stroke-width: 1.5;
+}
+
+.nn-toolbar-visibility-icon svg.nn-vault-icon-svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Mobile-specific toolbar visibility button styles */
+.is-mobile .nn-toolbar-visibility-control {
+    width: 100%;
+}
+
+.is-mobile .nn-toolbar-visibility-sections {
+    width: 100%;
+}
+
+.is-mobile .nn-toolbar-visibility-group {
+    width: 100%;
+}
+
+.is-mobile .nn-toolbar-visibility-group-label {
+    text-align: center;
+}
+
+.is-mobile .nn-toolbar-visibility-grid {
+    width: 100%;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0;
+    justify-content: space-between;
+}
+
+/* YouTube-style play button used in settings */
+button.nn-youtube-button {
+    background-color: #ff0000;
+    border: none;
+    color: #ffffff;
+    min-width: 54px;
+}
+
+button.nn-youtube-button:hover {
+    background-color: #cc0000;
+}
+
+button.nn-youtube-button svg {
+    color: #ffffff;
+    fill: #ffffff;
+    stroke: none;
+}
+
+.is-mobile button.nn-toolbar-visibility-toggle.nn-mobile-toolbar-button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+}
+
+.is-mobile .nn-toolbar-visibility-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.is-mobile .nn-toolbar-visibility-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* Android-specific adjustments for smaller buttons */
+.notebook-navigator-android button.nn-toolbar-visibility-toggle.nn-mobile-toolbar-button {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+}
+
+.notebook-navigator-android .nn-toolbar-visibility-icon {
+    width: 22px;
+    height: 22px;
+}
+
+.notebook-navigator-android .nn-toolbar-visibility-icon svg {
+    width: 22px;
+    height: 22px;
+}
+
+.nn-setting-profile-dropdown select {
+    width: 160px;
+    max-width: 100%;
+}
+
+.is-mobile .nn-setting-profile-dropdown select {
+    width: 100%;
+    max-width: none;
+}
+
+.nn-slider-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.nn-slider-control input[type='range'] {
+    flex: 0 0 100px;
+}
+
+.nn-slider-value {
+    flex: 0 0 48px;
+    font-size: var(--font-ui-smaller);
+    color: var(--nn-theme-foreground-muted);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Cards linking to the author's other plugins on the settings start page */
+.setting-item.nn-plugin-cards {
+    display: block;
+}
+
+/* One column when the settings pane is narrow, because the description needs the width */
+.nn-plugin-card-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16em, 1fr));
+    gap: var(--size-4-2);
+    margin-top: var(--size-4-2);
+}
+
+/* A button so the whole card can be reached from the keyboard. The declarations before the
+   layout undo the button styling a theme applies. */
+.nn-plugin-card {
+    height: auto;
+    padding: var(--size-4-3);
+    background-color: var(--background-secondary);
+    box-shadow: none;
+    text-align: start;
+    white-space: normal;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--size-4-3);
+    width: 100%;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    cursor: pointer;
+}
+
+.nn-plugin-card:hover {
+    border-color: var(--background-modifier-border-hover);
+    background-color: var(--background-modifier-hover);
+}
+
+.nn-plugin-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: var(--size-4-8);
+    height: var(--size-4-8);
+    border-radius: var(--radius-m);
+    background-color: var(--background-primary);
+    color: var(--text-accent);
+}
+
+/* min-width lets a long word wrap instead of stretching the card past its column */
+.nn-plugin-card-details {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-2-1);
+    min-width: 0;
+}
+
+.nn-plugin-card-name {
+    color: var(--text-normal);
+    font-size: var(--font-ui-small);
+    font-weight: var(--font-semibold);
+    line-height: 1.3;
+}
+
+/* One line whatever the language, cut with an ellipsis, so every card is the same height */
+.nn-plugin-card-description {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Sits at the far edge, the way Obsidian marks a row that opens somewhere else. It keeps to
+   the middle of the card while the icon and the name line up at the top. */
+.nn-plugin-card-arrow {
+    display: flex;
+    align-items: center;
+    align-self: center;
+    flex: 0 0 auto;
+    margin-inline-start: auto;
+    color: var(--text-faint);
+}
+
+.nn-plugin-card-arrow .svg-icon {
+    width: var(--icon-s);
+    height: var(--icon-s);
+}
+
+.nn-plugin-card:hover .nn-plugin-card-arrow {
+    color: var(--text-muted);
+}

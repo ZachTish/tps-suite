@@ -1,0 +1,6 @@
+node_modules
+.plugin-dev-cache.nosync/
+build/
+main.js
+*.map
+.DS_Store

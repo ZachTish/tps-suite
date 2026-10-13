@@ -1,0 +1,323 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+
+const settingsSource = readFileSync(new URL("../src/settings.ts", import.meta.url), "utf8");
+const connectionSource = readFileSync(new URL("../src/connection-settings.ts", import.meta.url), "utf8");
+const nutrientGoalSource = readFileSync(new URL("../src/nutrient-goal-settings.ts", import.meta.url), "utf8");
+const stylesSource = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
+const readmeSource = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+
+test("Health settings expose five shallow routed destinations", () => {
+  const destinationSource = settingsSource.slice(
+    settingsSource.indexOf("const HEALTH_SETTINGS_DESTINATIONS"),
+    settingsSource.indexOf("const createSettingsGroup"),
+  );
+  const destinations = [
+    ["daily", "Daily logging"],
+    ["food-goals", "Food & goals"],
+    ["workouts", "Workouts"],
+    ["library", "Note library"],
+    ["integrations", "Integrations & advanced"],
+  ];
+  for (const [id, label] of destinations) {
+    assert.match(destinationSource, new RegExp(`id: "${id}"[\\s\\S]+?label: "${label.replace(/[&]/g, "\\&")}"`));
+  }
+  assert.equal((destinationSource.match(/\bid: "/g) || []).length, 5);
+  assert.match(settingsSource, /private activeSettingsPage: HealthSettingsPage = "daily"/);
+  assert.match(settingsSource, /buttons\.setAttr\("role", "group"\)/);
+  assert.match(settingsSource, /buttons\.setAttr\("aria-label", "TPS Health settings pages"\)/);
+  assert.match(settingsSource, /"aria-pressed": active \? "true" : "false"/);
+  assert.match(settingsSource, /"aria-labelledby": `tps-health-settings-page-\$\{destination\.id\}-title`/);
+  assert.doesNotMatch(settingsSource, /"aria-controls":/);
+  assert.match(settingsSource, /tabindex: "-1"/);
+  assert.match(settingsSource, /pageTitle\?\.focus\(\{ preventScroll: true \}\)/);
+  assert.doesNotMatch(settingsSource, /tps-health-settings-(?:intro|route-summary|route-description|page-description)/);
+});
+
+test("GCM v2 kind configuration has one settings owner while legacy controls remain available to older installations", () => {
+  const libraryPage = settingsSource.slice(settingsSource.indexOf("private renderNoteLibraryPage"), settingsSource.indexOf("private renderNativeKindSettings"));
+  assert.match(libraryPage, /frontmatterKinds\?\.version === 2/);
+  assert.match(libraryPage, /Configure kinds in TPS GCM/);
+  assert.match(libraryPage, /openPluginSettings\("tps-global-context-menu"\)/);
+  assert.match(libraryPage, /} else \{\s*const identification = createSettingsGroup/);
+  assert.match(libraryPage, /"Food frontmatter key"/);
+  assert.match(libraryPage, /"Recipe\/meal tag"/);
+});
+
+test("Health settings keep only the three intentional optional disclosures", () => {
+  const disclosureIds = [...settingsSource.matchAll(
+    /this\.createOptionalDisclosure\(\s*page,\s*"([^"]+)"/g,
+  )].map((match) => match[1]);
+  assert.deepEqual(disclosureIds, ["custom-goals", "templates", "native-frontmatter"]);
+  assert.equal((settingsSource.match(/createEl\("details"/g) || []).length, 1);
+  assert.doesNotMatch(settingsSource, /createCollapsibleSection|tps-collapsible-section/);
+  assert.match(settingsSource, /"Custom goal JSON"/);
+  assert.match(settingsSource, /"Templates"/);
+  assert.doesNotMatch(settingsSource, /"Provider credentials"/);
+  assert.match(settingsSource, /"Health record frontmatter"/);
+});
+
+test("Every active user preference remains bound and exerciseTag is editable", () => {
+  const preferenceKeys = [
+    "includeBrandedFoodSearch",
+    "calorieGoal",
+    "proteinGoalG",
+    "activityGoalMinutes",
+    "healthGoals",
+    "workoutStartPropertyKey",
+    "workoutIntervalMode",
+    "workoutIntervalPropertyKey",
+    "restTimerMode",
+    "defaultRestSeconds",
+    "defaultWorkoutCooldownDays",
+    "defaultWorkoutEstimateMinutes",
+    "workoutSetNotation",
+    "workoutControlPlacement",
+    "workoutsFolder",
+    "workoutPlansFolder",
+    "exercisesFolder",
+    "foodsFolder",
+    "recipesFolder",
+    "foodIdentificationMode",
+    "foodFrontmatterKey",
+    "foodFrontmatterFoodValue",
+    "foodFrontmatterRecipeValue",
+    "foodFrontmatterMealValue",
+    "nativeRecordKinds",
+    "nativeRecordProperties",
+    "workoutIdentificationMode",
+    "workoutTag",
+    "exerciseTag",
+    "customFoodTag",
+    "recipeTag",
+    "workoutTemplatePath",
+    "workoutPlanTemplatePath",
+    "exerciseTemplatePath",
+    "foodTemplatePath",
+    "showFoodLogButtonInGcm",
+    "openFoodFactsUserAgent",
+    "usdaApiKeySecrets",
+    "enableLogging",
+  ];
+  for (const key of preferenceKeys) {
+    const folderHelperBinding = ["workoutsFolder", "workoutPlansFolder", "exercisesFolder", "foodsFolder", "recipesFolder"].includes(key)
+      ? new RegExp(`addLibraryFolderSetting\\(folders, "${key}"`)
+      : null;
+    assert.match(
+      ["calorieGoal", "proteinGoalG"].includes(key) ? nutrientGoalSource.replaceAll("plugin.settings", "this.plugin.settings") : (settingsSource + connectionSource).replaceAll("settings => settings", "settings => this.plugin.settings").replaceAll("settings.nativeRecord", "this.plugin.settings.nativeRecord"),
+      ["workoutStartPropertyKey", "workoutIntervalPropertyKey", "foodFrontmatterFoodValue", "foodFrontmatterRecipeValue", "foodFrontmatterMealValue"].includes(key) ? new RegExp(`"${key}"`) : folderHelperBinding ?? new RegExp(`this\\.plugin\\.settings\\.${key}\\b`),
+      `${key} must remain connected to the settings UI`,
+    );
+  }
+  assert.match(settingsSource, /\.setName\("Exercise tag"\)[\s\S]+?this\.plugin\.settings\.exerciseTag = value\.trim\(\)/);
+  assert.match(settingsSource, /\.setName\("Food tag"\)[\s\S]+?Blank disables this identity signal/);
+  assert.match(settingsSource, /addMappingSetting\(identification, "Food frontmatter key"/);
+  assert.match(settingsSource, /"Food value"/);
+  assert.match(settingsSource, /"Recipe value"/);
+  assert.match(settingsSource, /"Meal value"/);
+  assert.match(settingsSource, /"Food entry kind value"/);
+  assert.match(settingsSource, /"Activity entry kind value"/);
+  assert.match(settingsSource, /renderNativeFrontmatterSettings/);
+  assert.match(settingsSource, /addNativePropertyKeySetting/);
+  for (const [key, label] of [["activity", "Activity name"], ["sourceId", "Source record ID"], ["flightsClimbed", "Flights climbed"]]) {
+    assert.match(settingsSource, new RegExp(`\\["${key}", "${label}"\\]`));
+  }
+  assert.match(settingsSource, /setButtonText\("Open GCM settings"\)/);
+  assert.match(settingsSource, /foodIdentificationMode === "metadata" \|\| this\.plugin\.settings\.foodIdentificationMode === "metadata-folder-tag"/);
+  assert.doesNotMatch(settingsSource, /this\.plugin\.settings\.(dailyNoteFormat|dailyNoteFolder)/);
+  assert.match(settingsSource, /\.setName\("Daily Notes source"\)/);
+  assert.match(settingsSource, /Obsidian → Core plugins → Daily notes/);
+  assert.match(settingsSource, /setButtonText\("Open Daily Notes settings"\)/);
+  assert.match(settingsSource, /openTabById\?\.\("daily-notes"\)/);
+  assert.match(settingsSource, /setButtonText\("Open connections"\)/);
+  assert.match(settingsSource, /addWorkoutPropertyKey\(\s*"Workout start property"/);
+  assert.match(settingsSource, /\.setName\("Workout interval style"\)/);
+  assert.match(settingsSource, /\.addOption\("duration", "Duration in minutes"\)/);
+  assert.match(settingsSource, /\.addOption\("end", "Ending datetime"\)/);
+  assert.match(settingsSource, /addWorkoutPropertyKey\(\s*"Workout interval property"/);
+  assert.match(settingsSource, /\.setName\("Workout controls"\)/);
+  assert.match(settingsSource, /\.addOption\("inline", "In workout card"\)/);
+  assert.match(settingsSource, /\.addOption\("floating", "In floating note bar"\)/);
+  assert.match(settingsSource, /workout-controls:changed/);
+  assert.match(settingsSource, /this\.addMappingSetting\(calendarProperties/);
+  assert.match(settingsSource, /controller\.openConnectionSettings\(section\)/);
+  assert.match(settingsSource, /openTabById\?\.\(pluginId\)/);
+  assert.doesNotMatch(settingsSource, /this\.plugin\.settings\.(activeSettingsPage|disclosureState|settingsPage)/);
+  assert.doesNotMatch(settingsSource, /this\.plugin\.settings\.(activeWorkoutPath|activeWorkoutId|pendingFoodLogDraft|rollupHeading)/);
+});
+
+test("Reusable entity destinations can be typed atomically or selected from existing vault folders", () => {
+  assert.match(settingsSource, /class HealthFolderSuggestModal extends FuzzySuggestModal<TFolder>/);
+  assert.match(settingsSource, /getAllLoadedFiles\(\)[\s\S]+entry instanceof TFolder/);
+  assert.ok(settingsSource.includes('entry.path.replace(/^\\/+|\\/+$/g, "")'), "the vault root must not appear as a selectable entity folder");
+  assert.match(settingsSource, /\.setPlaceholder\("Choose a vault folder"\)/);
+  for (const [key, label] of [
+    ["workoutsFolder", "Workouts destination"],
+    ["workoutPlansFolder", "Workout plans destination"],
+    ["exercisesFolder", "Exercises destination"],
+    ["foodsFolder", "Foods destination"],
+    ["recipesFolder", "Recipes destination"],
+  ]) {
+    assert.match(settingsSource, new RegExp(`addLibraryFolderSetting\\(folders, "${key}", "${label}"`));
+  }
+  const helperSource = settingsSource.slice(
+    settingsSource.indexOf("private addLibraryFolderSetting"),
+    settingsSource.indexOf("private renderIntegrationsPage"),
+  );
+  assert.match(helperSource, /dataset\.tpsHealthLibraryFolder = key/);
+  assert.match(helperSource, /addEventListener\("change", \(\) => void commit\(text\.getValue\(\)\)\)/);
+  assert.match(helperSource, /event\.key !== "Enter"/);
+  assert.match(helperSource, /setIcon\("folder-search"\)/);
+  assert.match(helperSource, /new HealthFolderSuggestModal\(this\.app/);
+  assert.match(settingsSource, /Existing exercise notes remain where they are/);
+  assert.match(settingsSource, /Existing food notes remain where they are/);
+  assert.doesNotMatch(helperSource, /\.onChange\(async \(value\)/, "folder paths must not persist partial values on every keystroke");
+});
+
+test("USDA rerenders retain disclosure, scroll, and reachable focus", () => {
+  const providerSource = connectionSource.slice(
+    connectionSource.indexOf("private renderProviderCredentials"),
+    connectionSource.indexOf("private usdaSecretFocusSelector"),
+  );
+  assert.match(settingsSource, /private redisplayPreservingContext\(focusSelector\?: string\): void/);
+  assert.match(settingsSource, /const scrollTop = this\.containerEl\.scrollTop/);
+  assert.match(settingsSource, /\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(settingsSource, /this\.containerEl\.scrollTop = scrollTop/);
+  assert.match(connectionSource, /if \(this\.disposed\) return/);
+  assert.ok(
+    (providerSource.match(/this\.refresh\(/g) || []).length >= 5,
+    "secret edit, move, remove, and add routes must use the preserving rerender helper",
+  );
+  assert.doesNotMatch(providerSource, /this\.display\(\)/);
+  assert.match(providerSource, /dataset\.tpsHealthUsdaSecretIndex/);
+  assert.match(providerSource, /dataset\.tpsHealthUsdaAdd/);
+  assert.match(connectionSource, /\[data-tps-health-usda-secret-index="\$\{index\}"\] input/);
+});
+
+test("Daily logging offers only whole-note records and explicit historical import", () => {
+  const dailySource = settingsSource.slice(
+    settingsSource.indexOf("private renderDailyLoggingPage"),
+    settingsSource.indexOf("private renderFoodGoalsPage"),
+  );
+  assert.match(dailySource, /setName\("Earlier inline logs need review"\)/);
+  assert.match(dailySource, /setButtonText\("Mark reviewed"\)/);
+  assert.match(dailySource, /setButtonText\("Preview import"\)/);
+  assert.match(dailySource, /setButtonText\("Copy into notes"\)/);
+  for (const retired of ["Health storage", "Food log target", "Food log file", "Default food log section", "Automatic daily rollups"]) {
+    assert.ok(!dailySource.includes(`setName("${retired}")`), retired);
+  }
+  const workoutSource = settingsSource.slice(settingsSource.indexOf("private renderWorkoutsPage"), settingsSource.indexOf("private renderNoteLibraryPage"));
+  for (const retired of ["Also create a dedicated workout note", "Workout position in Daily Note"]) {
+    assert.ok(!workoutSource.includes(`setName("${retired}")`), retired);
+  }
+  assert.match(workoutSource, /setName\("Workout controls"\)/);
+});
+
+test("Health settings mobile CSS is namespaced and keeps controls usable", () => {
+  assert.match(stylesSource, /\.tps-health-settings-hub\s*\{[\s\S]+position: sticky/);
+  assert.match(stylesSource, /\.tps-health-settings-route-grid\s*\{[\s\S]+grid-template-columns: repeat\(5/);
+  assert.match(stylesSource, /button\.tps-health-settings-route-button\[aria-pressed="true"\]/);
+  assert.match(settingsSource, /scrollIntoView\(\{ block: "nearest", inline: "nearest" \}\)/);
+  assert.match(settingsSource, /pageTitle\?\.scrollIntoView\(\{ block: "start" \}\)/);
+  assert.match(stylesSource, /\.tps-health-settings-page-title:focus-visible/);
+  assert.match(stylesSource, /@media \(max-width: 700px\)[\s\S]+\.tps-health-settings-route-grid\s*\{[\s\S]+display: flex/);
+  assert.match(stylesSource, /@media \(max-width: 700px\)[\s\S]+button\.tps-health-settings-route-button\s*\{[\s\S]+min-width: 148px/);
+  assert.match(stylesSource, /\.tps-health-settings-route-description\s*\{\s*display: none;/);
+  assert.match(stylesSource, /\.tps-health-settings-page \.setting-item\s*\{[\s\S]+align-items: stretch;[\s\S]+flex-direction: column;/);
+  assert.match(stylesSource, /\.tps-health-settings-page \.setting-item-control\s*\{[\s\S]+width: 100%/);
+  assert.match(stylesSource, /\.tps-health-settings-json\s*\{[\s\S]+width: 100%/);
+  assert.match(stylesSource, /\.tps-health-settings-page \[data-tps-health-usda-secret-index\]\s*\{[\s\S]+min-width: 0/);
+});
+
+test("Workout set controls stay in one compact table row in Reading and Live Preview", () => {
+  assert.match(stylesSource, /\.tps-health-workout-set-row\s*\{[\s\S]+container-type: inline-size;/);
+  assert.match(stylesSource, /\.tps-health-workout-set-editor\s*\{[\s\S]+container-type: inline-size;/);
+  assert.match(stylesSource, /\.tps-health-workout-set-row\s*\{[\s\S]+overflow: visible;/);
+  const finalLayoutStart = stylesSource.lastIndexOf("/* Authoritative compact workout table.");
+  assert.ok(finalLayoutStart > stylesSource.indexOf("/* Workout rows are compact"), "authoritative layout must follow compact defaults");
+  const finalLayout = stylesSource.slice(finalLayoutStart, stylesSource.indexOf("/* Health surfaces:"));
+  assert.match(finalLayout, /grid-template-columns: minmax\(30px, \.42fr\) minmax\(66px, 1\.15fr\) minmax\(46px, \.78fr\) minmax\(54px, \.9fr\) minmax\(34px, \.5fr\)/);
+  assert.match(finalLayout, /\.tps-health-workout-set-grid-header,[\s\S]+\.tps-health-workout-set-metrics[\s\S]+display: grid/);
+  assert.match(finalLayout, /\.tps-health-workout-set-previous,[\s\S]+\.tps-health-workout-set-field-label,[\s\S]+display: none/);
+  assert.match(finalLayout, /\.tps-health-workout-set-stepper \.tps-health-workout-set-step\s*\{\s*display: none;/);
+  assert.match(finalLayout, /@container tps-health-workout-set-row \(max-width: 330px\)[\s\S]+grid-template-columns: 28px minmax\(56px, 1fr\) minmax\(40px, \.7fr\) minmax\(46px, \.78fr\) 34px/);
+  assert.match(finalLayout, /\.markdown-source-view\.mod-cm6 \.cm-content \.tps-health-workout-set-editor\s*\{[\s\S]+background: transparent;[\s\S]+border-block: 0;[\s\S]+border-inline: 1px solid var\(--background-modifier-border\);[\s\S]+margin: 0;[\s\S]+padding: 0 7px;[\s\S]+width: 100%;/);
+  assert.match(finalLayout, /\.markdown-source-view\.mod-cm6 \.cm-content \.tps-health-workout-set-editor\.is-exercise-start\s*\{[\s\S]+border-block-start: 1px solid var\(--background-modifier-border\);[\s\S]+border-radius: 8px 8px 0 0;/);
+  assert.match(finalLayout, /\.markdown-source-view\.mod-cm6 \.cm-content \.tps-health-workout-set-editor\.is-exercise-end\s*\{[\s\S]+border-block-end: 1px solid var\(--background-modifier-border\);[\s\S]+border-radius: 0 0 8px 8px;/);
+  assert.match(finalLayout, /\.tps-health-workout-set-editor\.is-exercise-end \.tps-health-workout-set-metrics\s*\{\s*border-bottom: 0;/);
+  assert.doesNotMatch(finalLayout, /repeat\([123], minmax\(0, 1fr\)\)/, "set metrics must never reflow into stacked cards");
+  assert.doesNotMatch(finalLayout, /border-left: 3px solid/, "the compact table does not add a colored left rail");
+});
+
+test("README documents the routed settings contract", () => {
+  for (const label of ["Daily logging", "Food & goals", "Workouts", "Note library", "Integrations & advanced"]) {
+    assert.match(readmeSource, new RegExp(`\\*\\*${label.replace(/[&]/g, "\\&")}\\*\\*`));
+  }
+  assert.match(readmeSource, /Exercise tag/);
+  assert.match(readmeSource, /Custom goal JSON/);
+  assert.match(readmeSource, /Provider credentials/);
+  assert.match(readmeSource, /route and scroll position/);
+});
+
+
+test("recipe expansion omits the generic explanation", () => {
+  const main = readFileSync(new URL("../src/main.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(main, /Current recipe, scaled to the logged portion/);
+});
+
+test('supplement fields use one transient selector and bounded narrow-editor controls', () => {
+ assert.match(settingsSource, /setName\("Vitamin, mineral or supplement field"\)/);
+ assert.match(settingsSource, /dropdown\.onChange\(renderNutrientKey\)/);
+ assert.match(stylesSource, /\.tps-health-form-grid \.tps-health-nutrient-editor \.setting-item\s*\{\s*display: grid;\s*grid-template-columns: minmax\(0, 1fr\) 110px;/);
+ assert.match(stylesSource, /\.tps-health-nutrient-editor \.setting-item\[hidden\]/);
+});
+
+
+test("Daily logging keeps block appearance controls and removes the retired Macros Base action", () => {
+  assert.doesNotMatch(settingsSource, /setName\("Macros Base"\)|openMacrosBase/);
+  assert.match(settingsSource, /setName\("Macros block"\)/);
+  assert.match(settingsSource, /setName\("Nutrient rows"\)/);
+  assert.match(settingsSource, /this\.plugin\.settings\.macroBlockStyle/);
+  assert.match(settingsSource, /this\.plugin\.settings\.macroNutrientRows/);
+  assert.doesNotMatch(stylesSource, /\.tps-health-macros-base/);
+});
+
+test("Nutrient settings provide one searchable editor, accessible controls and mobile layout", () => {
+ assert.match(settingsSource,/renderNutrientGoalSettings/);
+ for (const label of ['Find a nutrient','Nutrient category','Select nutrient goal','Save target','Remove goal']) assert.ok(nutrientGoalSource.includes(label));
+ assert.match(nutrientGoalSource,/aria-live/);
+ assert.match(nutrientGoalSource,/aria-pressed/);
+ assert.match(nutrientGoalSource,/\.focus\(\)/);
+ assert.doesNotMatch(nutrientGoalSource,/createEl\(['"]details/);
+ assert.match(stylesSource,/@container \(max-width: 520px\)/);
+ assert.ok(stylesSource.includes('.tps-health-settings-nutrient-summary button'));
+});
+
+
+test("Note library exposes workout and native identities with explicit confirmed migration", () => {
+  const library=settingsSource.slice(settingsSource.indexOf('private renderNoteLibraryPage'),settingsSource.indexOf('private renderIntegrationsPage'));
+  for(const label of ['Workout frontmatter key','Workout plan value','Exercise value','Entry and session frontmatter key','Migrate previous mappings']) assert.ok(library.includes(label));
+  assert.match(library,/this\.renderNativeKindSettings\(records\)/);
+  assert.match(settingsSource,/setButtonText\("Apply"\)/);
+  assert.match(settingsSource,/changeHealthMapping\(this\.plugin, next/);
+  assert.match(settingsSource,/redisplayPreservingContext\(`\[data-tps-health-mapping/);
+  assert.doesNotMatch(settingsSource,/nativeRecordKindAliases\[key\] =|nativeRecordPropertyAliases\[key\] =/);
+});
+
+
+test("Health entry key editor is direct, labeled, confirmed and restores focus",()=>{
+ assert.match(settingsSource,/setName\("Entry and session frontmatter key"\)/);
+ assert.match(settingsSource,/mappings\.changeHealthKindKey\(entryKey\.getValue\(\)\)/);
+ assert.match(settingsSource,/setAttribute\("aria-label", "Entry and session frontmatter key"\)/);
+ assert.match(settingsSource,/redisplayPreservingContext\('\[data-tps-health-entry-key\]'/);
+ assert.match(settingsSource,/event\.key === "Enter"/);
+});
+
+test('workout calendar Apply repairs the current key and scopes key/style changes to timing',()=>{
+  assert.match(settingsSource,/value === read\(this\.plugin\.settings\) && scope !== "workout-timing"/);
+  assert.match(settingsSource,/Apply the current key again to repair older workout notes/);
+  const calendar=settingsSource.slice(settingsSource.indexOf('const addWorkoutPropertyKey'),settingsSource.indexOf('const sessionDefaults'));
+  assert.match(calendar,/toLowerCase\(\), "workout-timing"\)/);
+  assert.match(calendar,/Workout interval style: \$\{value\}`,[\s]*"workout-timing"/);
+});

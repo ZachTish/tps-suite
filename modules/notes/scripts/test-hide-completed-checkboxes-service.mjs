@@ -1,0 +1,267 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+const source = readFileSync(new URL('../src/services/hide-completed-checkboxes-service.ts', import.meta.url), 'utf8');
+const styles = readFileSync(new URL('../src/plugin-styles.ts', import.meta.url), 'utf8');
+const mainSource = readFileSync(new URL('../src/main.ts', import.meta.url), 'utf8');
+const pluginApiSource = readFileSync(new URL('../src/plugin-api.ts', import.meta.url), 'utf8');
+const typesSource = readFileSync(new URL('../src/types.ts', import.meta.url), 'utf8');
+const constantsSource = readFileSync(new URL('../src/constants.ts', import.meta.url), 'utf8');
+const settingsSource = readFileSync(new URL('../src/settings-tab.ts', import.meta.url), 'utf8');
+const refreshRootSource = source.slice(
+  source.indexOf('private refreshLivePreviewRoot'),
+  source.indexOf('private clearLivePreviewRoot'),
+);
+const observeRootSource = source.slice(
+  source.indexOf('private observeRoot'),
+  source.indexOf('private scheduleRefresh'),
+);
+const observeLiveRootSource = source.slice(
+  source.indexOf('private observeRoot'),
+  source.indexOf('private observeRenderedRoot'),
+);
+const editorExtensionSource = source.slice(
+  source.indexOf('getEditorExtension(): Extension'),
+  source.indexOf('attach(): void'),
+);
+const syncRevealButtonSource = source.slice(
+  source.indexOf('private syncRevealButton'),
+  source.indexOf('private revealTemporarily'),
+);
+const liveRevealStyles = styles.slice(
+  styles.indexOf('.markdown-source-view.mod-cm6.is-live-preview > .tps-gcm-completed-checkbox-reveal'),
+  styles.indexOf('.markdown-preview-view > .tps-gcm-completed-checkbox-reveal'),
+);
+const renderedRevealStyles = styles.slice(
+  styles.indexOf('.markdown-preview-view > .tps-gcm-completed-checkbox-reveal'),
+  styles.indexOf('.markdown-source-view.mod-cm6.is-live-preview .tps-gcm-completed-checkbox-reveal button'),
+);
+const mobileRevealStyles = styles.slice(
+  styles.indexOf('body.is-mobile .markdown-source-view.mod-cm6.is-live-preview > .tps-gcm-completed-checkbox-reveal'),
+  styles.indexOf('.markdown-source-view.mod-cm6.is-live-preview .tps-gcm-completed-checkbox-reveal button:hover'),
+);
+
+test('completed checkbox hiding is scoped and idle-aware to avoid typing jitter', () => {
+  assert.match(source, /private rootObservers = new WeakMap/);
+  assert.match(source, /private pendingRoots = new Set<HTMLElement>/);
+  assert.match(source, /private pendingRenderedRoots = new Set<HTMLElement>/);
+  assert.match(source, /private initializedRoots = new WeakSet<HTMLElement>/);
+  assert.match(source, /getEditorExtension\(\): Extension/);
+  assert.match(source, /revealCompletedForFile\(filePath: string, lineNumber\?: number\): void/);
+  assert.match(source, /getMarkdownRootsForFile\(filePath: string\): HTMLElement\[\]/);
+  assert.match(source, /ViewPlugin\.fromClass/);
+  assert.match(editorExtensionSource, /update\.docChanged \|\| update\.transactions\.some/);
+  assert.doesNotMatch(editorExtensionSource, /viewportChanged|selectionSet/);
+  assert.match(source, /buildCompletedLineDecorations\(view: EditorView\)/);
+  assert.match(source, /Decoration\.line\(\{ class: HIDDEN_LINE_CLASS \}\)/);
+  assert.match(source, /getHiddenCompletedLines\(view: EditorView\)/);
+  assert.match(source, /collectCompletedTaskBlockLines/);
+  assert.match(source, /findNextNonBlankDocLine/);
+  assert.match(source, /this\.getIndentWidth\(line\.text\) <= baseIndent/);
+  assert.match(source, /this\.plugin\.app\.workspace\.updateOptions\(\)/);
+  assert.match(pluginApiSource, /completedCheckboxes/);
+  assert.match(pluginApiSource, /revealCompletedForFile\(filePath, lineNumber\)/);
+  assert.match(mainSource, /this\.registerEditorExtension\(this\.hideCompletedCheckboxesService\.getEditorExtension\(\)\)/);
+  assert.match(source, /EDITING_ROOT_CLASS/);
+  assert.match(source, /EDITING_QUIET_WINDOW_MS = 1200/);
+  assert.match(source, /private rootLastInputAt = new WeakMap<HTMLElement, number>/);
+  assert.match(source, /private editingClearTimerIds = new Set<number>/);
+  assert.match(source, /mutationsAddedEditorRoot\(mutations\)/);
+  assert.match(source, /discoverRenderedRoots\(\)/);
+  assert.match(source, /refreshRenderedViews\(\)/);
+  assert.match(source, /refreshRenderedRoot\(root: HTMLElement\)/);
+  assert.match(source, /getRenderedRoots\(\): HTMLElement\[\]/);
+  assert.match(source, /\.markdown-preview-view, \.markdown-rendered, \.markdown-reading-view/);
+  assert.match(source, /getRevealButtonMount\(root: HTMLElement\): HTMLElement/);
+  assert.match(source, /Obsidian owns every child of `\.markdown-preview-sizer`/);
+  assert.doesNotMatch(
+    source.slice(source.indexOf('private getRevealButtonMount'), source.indexOf('private isLivePreviewRoot')),
+    /querySelector<HTMLElement>\('\.markdown-preview-sizer'\)/,
+  );
+  assert.match(source, /wrap\.className = `\$\{REVEAL_WIDGET_CLASS\} tps-gcm-hover-element`/);
+  assert.match(source, /wrap\.dataset\.tpsHoverElement = 'true'/);
+  assert.match(source, /lastEditorInputAt/);
+  assert.match(source, /document\.addEventListener\('keydown', this\.boundMarkEditorInput, true\)/);
+  assert.match(source, /document\.addEventListener\('input', this\.boundMarkEditorInput, true\)/);
+  assert.match(source, /document\.addEventListener\('focusout', this\.boundEditorFocusOut, true\)/);
+  assert.match(source, /isRootActivelyBeingEdited\(root\)/);
+  assert.match(source, /isRootRecentlyEdited\(root\)/);
+  assert.match(source, /this\.scheduleRefreshAfterQuiet\(root\)/);
+  assert.match(source, /this\.markRootEditing\(root\)/);
+  assert.match(refreshRootSource, /if \(this\.isRootRecentlyEdited\(root\)\)/);
+  assert.doesNotMatch(refreshRootSource, /isRootActivelyBeingEdited/);
+  assert.match(observeRootSource, /if \(this\.isRootRecentlyEdited\(root\)\)/);
+  assert.match(observeRootSource, /mutationsNeedLivePreviewRefresh\(mutations\)/);
+  assert.match(source, /target === null \|\| target\.closest\('\.cm-content'\) === null/);
+  assert.doesNotMatch(observeRootSource, /isRootActivelyBeingEdited/);
+  assert.match(syncRevealButtonSource, /if \(this\.isRootRecentlyEdited\(root\) && wrap\.parentElement === mount\) return;/);
+  assert.match(syncRevealButtonSource, /if \(wrap\.parentElement !== mount\) mount\.prepend\(wrap\)/);
+  assert.match(syncRevealButtonSource, /const revealWidgets = Array\.from\(root\.querySelectorAll<HTMLElement>/);
+  assert.match(syncRevealButtonSource, /for \(const duplicate of revealWidgets\) duplicate\.remove\(\)/);
+  assert.match(syncRevealButtonSource, /if \(button\.textContent !== buttonLabel\) button\.textContent = buttonLabel/);
+  assert.match(syncRevealButtonSource, /if \(button\.getAttribute\('aria-label'\) !== ariaLabel\) button\.setAttribute\('aria-label', ariaLabel\)/);
+  assert.match(syncRevealButtonSource, /button\.addEventListener\('pointerdown', suppressPress\)/);
+  assert.match(syncRevealButtonSource, /button\.addEventListener\('touchstart', suppressPress, \{ passive: false \}\)/);
+  assert.match(syncRevealButtonSource, /button\.addEventListener\('touchend', toggleReveal, \{ passive: false \}\)/);
+  assert.match(syncRevealButtonSource, /lastTouchToggleAt/);
+  assert.match(syncRevealButtonSource, /event\.type === 'click' && Date\.now\(\) - lastTouchToggleAt < 700/);
+  assert.doesNotMatch(syncRevealButtonSource, /isRootActivelyBeingEdited/);
+  assert.match(source, /root\.classList\.add\(EDITING_ROOT_CLASS\)/);
+  assert.match(source, /root\.classList\.remove\(EDITING_ROOT_CLASS\)/);
+  assert.match(source, /this\.initializedRoots\.add\(root\)/);
+  assert.match(source, /REVEALED_ROOT_CLASS/);
+  assert.match(source, /HAS_REVEAL_WIDGET_CLASS/);
+  assert.match(source, /root\.classList\.toggle\(REVEALED_ROOT_CLASS, revealed\)/);
+  assert.match(source, /root\.classList\.add\(HAS_REVEAL_WIDGET_CLASS\)/);
+  assert.match(source, /root\.classList\.remove\(HAS_REVEAL_WIDGET_CLASS\)/);
+  assert.match(source, /root\.contains\(active\)/);
+  assert.match(source, /MAPPED_COMPLETED_TASK_CLASS = 'tps-gcm-mapped-completed-task'/);
+  assert.match(source, /getLinkedSubitemCompleteMarkers/);
+  assert.match(source, /completionStatuses: \['complete', 'wont-do'\]/);
+  assert.doesNotMatch(source, /completionStatuses: this\.plugin\.sharedServices\.status\.getDoneStatuses\(\)/);
+  assert.match(source, /const migratedMarker = MIGRATED_TASK_CHECKBOX\.slice\(1, -1\)/);
+  assert.match(source, /if \(migratedMarker\) markers\.add\(migratedMarker\)/);
+  assert.match(source, /isCompletedTaskSourceLine\(source: unknown\): boolean/);
+  assert.match(source, /private isCompletedTaskSourceLineWithMarkers\(source: unknown, completeMarkers: ReadonlySet<string>\): boolean/);
+  assert.match(source, /classifyRenderedTaskRows\(container: ParentNode\): number/);
+  assert.match(source, /normalizeLinkedSubitemCheckboxMarker/);
+  assert.match(source, /normalizeLinkedSubitemCheckboxMarker\([\s\S]{0,160}TASK_LINE_STATE_RE/u);
+  assert.match(source, /normalizeLinkedSubitemCheckboxMarker\(task\?\.getAttribute\('data-task'\)\)/u);
+  assert.match(source, /normalizeLinkedSubitemCheckboxMarker\(task\.getAttribute\('data-task'\)\)/u);
+  assert.match(source, /private syncRenderedCompletedTasks\(root: HTMLElement\): void/);
+  assert.doesNotMatch(source, /HIDDEN_TASK_DATA_SELECTOR|COMPLETED_TASK_RE|aria-checked="true"/);
+  assert.match(source, /private isLivePreviewRoot\(root: HTMLElement\): boolean/);
+  assert.match(source, /return isLivePreviewEditorRoot\(root\)/);
+  assert.doesNotMatch(source, /root\.classList\.contains\('is-source-mode'\)/);
+  assert.match(source, /EDITING_QUIET_WINDOW_MS - \(Date\.now\(\) - this\.lastEditorInputAt\)/);
+  assert.match(source, /Date\.now\(\) - this\.lastEditorInputAt < EDITING_QUIET_WINDOW_MS/);
+  assert.doesNotMatch(observeLiveRootSource, /attributes: true/);
+  assert.match(source, /attributeFilter: \['data-task'\]/);
+  assert.doesNotMatch(source, /completedLines\.includes\(line\)/);
+  assert.doesNotMatch(refreshRootSource, /classList\.toggle\(HIDDEN_LINE_CLASS/);
+  assert.match(refreshRootSource, /this\.livePreviewCompletedRoots\.get\(root\) === true/);
+  assert.doesNotMatch(refreshRootSource, /querySelectorAll<HTMLElement>\('\.cm-line'\)/);
+  assert.match(source, /updateLivePreviewCompletedState\(root, hiddenLines\.length > 0\)/);
+  assert.doesNotMatch(styles, /\.cm-line:has/);
+  assert.doesNotMatch(styles, /\.cm-line\[data-task=/);
+  assert.match(styles, /\.markdown-source-view\.mod-cm6\.is-live-preview \.cm-line\.tps-gcm-hidden-completed-checkbox-line/);
+  assert.match(styles, /\.is-live-preview\.tps-gcm-completed-checkboxes-revealed \.cm-line\.tps-gcm-hidden-completed-checkbox-line/);
+  assert.doesNotMatch(styles, /not\(\.is-source-mode\)/);
+  assert.match(styles, /\.markdown-preview-view\.tps-gcm-completed-checkboxes-revealed li\.task-list-item\.tps-gcm-mapped-completed-task/);
+  assert.match(styles, /hide-all-task-lines-reading-mode \.markdown-reading-view li\.task-list-item \{/);
+  assert.match(styles, /hide-all-task-lines-reading-mode \.markdown-reading-view\.tps-gcm-completed-checkboxes-revealed li\.task-list-item \{/);
+  assert.doesNotMatch(styles, /hide-completed-checkboxes \.markdown-rendered li\.task-list-item\.tps-gcm-mapped-completed-task/);
+  assert.doesNotMatch(styles, /li\.task-list-item\[data-task=">"\]/);
+  assert.match(styles, /\.markdown-preview-view > \.tps-gcm-completed-checkbox-reveal/);
+  assert.match(styles, /\.markdown-reading-view > \.tps-gcm-completed-checkbox-reveal/);
+  assert.match(styles, /\.markdown-source-view\.mod-cm6\.is-live-preview \{/);
+  assert.match(styles, /\.markdown-source-view\.mod-cm6\.is-live-preview\.tps-gcm-completed-checkboxes-has-reveal \.inline-title/);
+  assert.match(styles, /\.markdown-source-view\.mod-cm6\.is-live-preview > \.tps-gcm-completed-checkbox-reveal/);
+  assert.match(liveRevealStyles, /position: absolute;/);
+  assert.match(liveRevealStyles, /width: auto;/);
+  assert.match(liveRevealStyles, /min-width: max-content;/);
+  assert.match(liveRevealStyles, /right: max\(12px, calc\(\(100% - var\(--file-line-width, 700px\)\) \/ 2\)\);/);
+  assert.doesNotMatch(liveRevealStyles, /width: 100%;/);
+  assert.doesNotMatch(liveRevealStyles, /position: sticky;/);
+  assert.doesNotMatch(styles, /\.cm-contentContainer > \.tps-gcm-completed-checkbox-reveal/);
+  assert.match(renderedRevealStyles, /position: absolute;/);
+  assert.match(renderedRevealStyles, /width: auto;/);
+  assert.match(renderedRevealStyles, /min-width: max-content;/);
+  assert.doesNotMatch(renderedRevealStyles, /position: sticky;/);
+  assert.doesNotMatch(renderedRevealStyles, /width: 100%;/);
+  assert.match(mobileRevealStyles, /body\.is-mobile \.markdown-source-view\.mod-cm6\.is-live-preview > \.tps-gcm-completed-checkbox-reveal/);
+  assert.match(mobileRevealStyles, /body\.is-mobile \.markdown-reading-view \.tps-gcm-completed-checkbox-reveal/);
+  assert.match(mobileRevealStyles, /position: fixed;/);
+  assert.match(mobileRevealStyles, /left: max\(12px, env\(safe-area-inset-left, 0px\)\);/);
+  assert.match(mobileRevealStyles, /right: max\(12px, env\(safe-area-inset-right, 0px\)\);/);
+  assert.match(mobileRevealStyles, /bottom: calc\(188px \+ env\(safe-area-inset-bottom, 0px\)\);/);
+  assert.match(mobileRevealStyles, /min-height: 44px;/);
+  assert.match(mobileRevealStyles, /touch-action: manipulation !important;/);
+  assert.match(mobileRevealStyles, /pointer-events: auto !important;/);
+  assert.match(styles, /body\.tps-gcm-gesture-collapsed \.tps-gcm-hover-element/);
+  assert.match(styles, /body\.tps-gcm-gesture-collapsed \[data-tps-hover-element="true"\]/);
+  assert.match(styles, /body\.tps-tps-mobile-ui-gesture-hidden \.tps-gcm-hover-element/);
+  assert.match(styles, /body\.tps-tps-mobile-ui-keyboard-hidden \.tps-gcm-hover-element/);
+  assert.match(liveRevealStyles, /min-height: 24px;/);
+  assert.match(renderedRevealStyles, /min-height: 24px;/);
+  assert.doesNotMatch(liveRevealStyles, /height: 0;/);
+  assert.doesNotMatch(renderedRevealStyles, /height: 0;/);
+  assert.doesNotMatch(styles, /is-live-preview:not\(\.tps-gcm-completed-checkboxes-editing\):not\(\.tps-gcm-completed-checkboxes-revealed\)/);
+});
+
+test('reading-only completed-task scope clears Live Preview while retaining rendered and linked-context hiding', () => {
+  assert.match(typesSource, /CompletedTaskHidingScope = 'reading-and-live-preview' \| 'reading-only'/);
+  assert.match(typesSource, /completedTaskHidingScope: CompletedTaskHidingScope/);
+  assert.match(constantsSource, /completedTaskHidingScope: 'reading-and-live-preview'/);
+  assert.match(mainSource, /completedTaskHidingScope === 'reading-only'/);
+  assert.doesNotMatch(settingsSource, /Hide completed tasks in/);
+  assert.doesNotMatch(settingsSource, /Reading view only/);
+  assert.match(source, /READING_ONLY_BODY_CLASS = 'tps-gcm-hide-completed-checkboxes-reading-only'/);
+  assert.match(source, /shouldHideCompletedTasksInLivePreview\(\): boolean/);
+  assert.match(source, /completedTaskHidingScope !== 'reading-only'/);
+  assert.match(source, /const enabled = this\.shouldHideCompletedTasksInLivePreview\(\)/);
+  assert.match(source, /!this\.shouldHideCompletedTasksInLivePreview\(\)[\s\S]{0,260}this\.updateLivePreviewCompletedState\(root, false\)[\s\S]{0,100}return Decoration\.none/);
+  assert.match(source, /this\.clearLivePreviewRoot\(root\)/);
+  assert.match(source, /hasCompletedTasks = this\.livePreviewCompletedRoots\.get\(root\) === true \|\| root\.querySelector\(/);
+  assert.match(source, /tps-gcm-linked-context-panel--live-preview \.tps-gcm-linked-context-card--terminal-task/);
+  assert.match(styles, /tps-gcm-linked-context-panel--reading \.tps-gcm-linked-context-card--terminal-task/);
+  assert.match(styles, /not\(\.tps-gcm-hide-completed-checkboxes-reading-only\) \.tps-gcm-linked-context-panel--live-preview/);
+  assert.match(styles, /tps-gcm-hide-completed-checkboxes-reading-only \.tps-gcm-linked-context-panel--live-preview li\.task-list-item\.tps-gcm-mapped-completed-task/);
+  assert.match(styles, /tps-gcm-linked-context-panel--source li\.task-list-item\.tps-gcm-mapped-completed-task/);
+  assert.doesNotMatch(styles, /\.markdown-rendered \.tps-gcm-linked-context-card--terminal-task/);
+});
+
+test('retired task reveal persistence has no active settings control', () => {
+  assert.match(typesSource, /persistTaskVisibilityStateToFrontmatter: boolean/);
+  assert.match(typesSource, /taskVisibilityStateFrontmatterKey: string/);
+  assert.match(constantsSource, /persistTaskVisibilityStateToFrontmatter: false/);
+  assert.match(constantsSource, /taskVisibilityStateFrontmatterKey: 'gcmTaskVisibility'/);
+  assert.doesNotMatch(settingsSource, /Persist task reveal state to frontmatter/);
+  assert.doesNotMatch(settingsSource, /Task reveal frontmatter key/);
+  assert.match(mainSource, /this\.settings\.persistTaskVisibilityStateToFrontmatter = false/u);
+  assert.match(syncRevealButtonSource, /this\.shouldPersistRevealState\(\)/);
+  assert.match(syncRevealButtonSource, /void this\.setPersistedRevealState\(root, revealAllTasks, !revealed\)/);
+  assert.match(source, /type TaskVisibilityState = \{ showCompleted\?: boolean; showTasks\?: boolean \}/);
+  assert.match(source, /getEffectiveRevealState\(root: HTMLElement, revealAllTasks: boolean\): boolean/);
+  assert.match(source, /getPersistedRevealState\(root: HTMLElement\): TaskVisibilityState \| null/);
+  assert.match(source, /setPersistedRevealState\(root: HTMLElement, revealAllTasks: boolean, revealed: boolean\): Promise<void>/);
+  assert.match(source, /this\.plugin\.frontmatterMutationService\.process\(file, \(frontmatter\) =>/);
+  assert.match(source, /next\[revealAllTasks \? 'showTasks' : 'showCompleted'\] = revealed/);
+  assert.match(source, /frontmatter\[key\] = next/);
+  assert.match(source, /private getFileForRoot\(root: HTMLElement\): TFile \| null/);
+  assert.match(source, /container\?\.contains\(root\)/);
+  assert.match(source, /const persisted = revealAllTasks \? state\?\.showTasks : state\?\.showCompleted/);
+});
+
+test('retired line-hiding exclusions retain their schema without an active control', () => {
+  assert.match(typesSource, /taskHidingExclusionPatterns: string/);
+  assert.match(constantsSource, /taskHidingExclusionPatterns: ''/);
+  assert.doesNotMatch(settingsSource, /Task hiding exclusions|Hide completed task lines|Hide all task lines in reading mode/u);
+  assert.match(mainSource, /this\.settings\.hideCompletedCheckboxes = false/u);
+  assert.match(mainSource, /this\.settings\.hideAllTaskLinesInReadingMode = false/u);
+  assert.match(mainSource, /taskHidingExclusionPatterns = String\(this\.settings\.taskHidingExclusionPatterns \?\? ''\)\.trim\(\)/);
+  assert.match(source, /TASK_HIDING_EXCLUDED_ROOT_CLASS = 'tps-gcm-task-hiding-excluded'/);
+  assert.match(source, /private clearTaskHidingRoot\(root: HTMLElement\): void/);
+  assert.match(source, /private isRootTaskHidingExcluded\(root: HTMLElement\): boolean/);
+  assert.match(source, /private isTaskHidingExcludedFile\(file: TFile\): boolean/);
+  assert.match(source, /private matchesTaskHidingExclusionPattern\(/);
+  assert.match(source, /asLower\.startsWith\('tag:'\)/);
+  assert.match(source, /asLower\.startsWith\('#'\)/);
+  assert.match(source, /asLower\.startsWith\('cssclass:'\)/);
+  assert.match(source, /private getTaskHidingFileTags\(file: TFile\): Set<string>/);
+  assert.match(source, /cache\?\.tags \?\? \[\]/);
+  assert.match(source, /frontmatter\?\.tags/);
+  assert.match(source, /frontmatter\?\.tag/);
+  assert.match(source, /private getTaskHidingFileCssClasses\(file: TFile\): Set<string>/);
+  assert.match(source, /private getTaskHidingExclusionPatterns\(\): string\[\]/);
+  assert.match(source, /\.split\(\/\\r\?\\n\|,\/\)/);
+  assert.match(source, /this\.plugin\.matchesAutoFrontmatterExclusionPattern\(normalizedPath, normalizedBasename, pattern\)/);
+  assert.match(source, /root && this\.isRootTaskHidingExcluded\(root\)[\s\S]{0,180}this\.updateLivePreviewCompletedState\(root, false\)[\s\S]{0,100}return Decoration\.none/);
+  assert.match(source, /this\.plugin\.settings\.hideCompletedCheckboxes === true \|\|[\s\S]*this\.plugin\.settings\.hideAllTaskLinesInReadingMode === true/);
+  assert.match(source, /if \(this\.isRootTaskHidingExcluded\(root\)\) \{\s*this\.clearTaskHidingRoot\(root\);\s*continue;/);
+  assert.match(source, /if \(this\.isRootTaskHidingExcluded\(root\)\) \{\s*this\.clearTaskHidingRoot\(root\);\s*return;/);
+  assert.match(styles, /tps-gcm-task-hiding-excluded/);
+  assert.match(styles, /hide-completed-checkboxes \.markdown-reading-view\.tps-gcm-task-hiding-excluded li\.task-list-item\.tps-gcm-mapped-completed-task/);
+  assert.match(styles, /hide-all-task-lines-reading-mode \.markdown-reading-view\.tps-gcm-task-hiding-excluded li\.task-list-item \{/);
+});

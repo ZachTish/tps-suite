@@ -1,0 +1,445 @@
+import { EXTRA_NUTRIENT_PROPERTIES, type ExtraNutrientKey, type CustomNutrientDefinition, type ExtraNutrition } from "./nutrients";
+export type RestTimerMode = "count-up" | "count-down";
+export type FoodSource = "custom-note" | "custom-inline" | "open-food-facts" | "usda" | "curated" | "manual" | "nutrition-label" | "ai-research";
+export type FoodNoteType = "food" | "recipe" | "meal";
+export type HealthGoalKind = "min" | "max" | "range" | "counter";
+export type FoodLogTarget = "daily-note" | "single-file";
+export type WorkoutLogTarget = "session-note" | "daily-note" | "both";
+export type WorkoutDailyNotePlacement = "after-frontmatter" | "before-first-h2" | "bottom";
+export type ActivitySource = "manual" | "workout" | "apple-health";
+export type HealthStorageMode = "legacy" | "native-records";
+export type EnergyEstimateMode = "calculated" | "fixed" | "activity-notes";
+export type WorkoutSetNotation = "compact" | "verbose";
+export type WorkoutIntervalMode = "duration" | "end";
+export type WorkoutControlPlacement = "inline" | "floating";
+export type HealthEntityIdentificationMode = "metadata-folder-tag" | "folder" | "tag" | "metadata";
+export type WorkflowRecurrenceMode = "completion-triggered";
+export type WorkflowTemplateKind = "workflow";
+export type WorkflowRunKind = "run";
+export type WorkflowRunType = "workout" | "workflow";
+
+export const USDA_API_KEY_SECRET = "tps-health-usda-api-key";
+export const USDA_API_KEY_SECRET_MAX = 5;
+export const USDA_DEMO_API_KEY = "DEMO_KEY";
+export const TPS_HEALTH_SCHEMA_VERSION = 9;
+
+export type HealthNativeRecordKindKey = "foodEntry" | "activityEntry" | "workoutSession" | "workoutExercise";
+export type HealthNativeRecordPropertyKey = ExtraNutrientKey
+  | "completedDate" | "food" | "quantity" | "unit"
+  | "calories" | "proteinG" | "carbsG" | "fatG" | "fiberG" | "sugarG" | "sugarAlcoholG" | "alcoholG" | "sodiumMg"
+  | "note" | "activity" | "activityType" | "startedAt" | "durationMinutes" | "distance" | "distanceUnit" | "steps"
+  | "flightsClimbed" | "caloriesBurned" | "source" | "sourceId" | "device" | "status" | "workoutPlan" | "session" | "archived" | "archivedDate";
+
+export interface HealthGoal {
+  propertyKey: string;
+  label: string;
+  unit: string;
+  kind: HealthGoalKind;
+  min?: number;
+  max?: number;
+  color?: string;
+}
+
+export interface TPSHealthSettings {
+  settingsVersion: number;
+  storageMode: HealthStorageMode;
+  workoutsFolder: string;
+  workoutPlansFolder: string;
+  exercisesFolder: string;
+  foodsFolder: string;
+  recipesFolder: string;
+  workoutTemplatePath: string;
+  workoutPlanTemplatePath: string;
+  exerciseTemplatePath: string;
+  foodTemplatePath: string;
+  restTimerMode: RestTimerMode;
+  defaultRestSeconds: number;
+  defaultWorkoutCooldownDays: number;
+  defaultWorkoutEstimateMinutes: number;
+  workoutSetNotation: WorkoutSetNotation;
+  workoutControlPlacement: WorkoutControlPlacement;
+  workoutStartPropertyKey: string;
+  workoutIntervalMode: WorkoutIntervalMode;
+  workoutIntervalPropertyKey: string;
+  appendWorkoutSummaryToDailyNote: boolean;
+  defaultFoodLogSection: string;
+  foodLogFilePath: string;
+  workoutLogTarget: WorkoutLogTarget;
+  workoutDailyNotePlacement: WorkoutDailyNotePlacement;
+  foodIdentificationMode: HealthEntityIdentificationMode;
+  workoutIdentificationMode: HealthEntityIdentificationMode;
+  workoutFrontmatterKey: string;
+  workoutPlanFrontmatterValue: string;
+  exerciseFrontmatterValue: string;
+  foodFrontmatterKey: string;
+  foodFrontmatterFoodValue: string;
+  foodFrontmatterRecipeValue: string;
+  foodFrontmatterMealValue: string;
+  nativeRecordKinds: Record<HealthNativeRecordKindKey, string>;
+  nativeRecordProperties: Record<HealthNativeRecordPropertyKey, string>;
+  nativeRecordKindAliases: Partial<Record<HealthNativeRecordKindKey, string[]>>;
+  nativeRecordPropertyAliases: Partial<Record<HealthNativeRecordPropertyKey, string[]>>;
+  workoutTag: string;
+  exerciseTag: string;
+  customFoodTag: string;
+  recipeTag: string;
+  foodLogTarget: FoodLogTarget;
+  showFoodLogButtonInGcm: boolean;
+  automaticDailyRollups: boolean;
+  includeBrandedFoodSearch: boolean;
+  macroBlockStyle: "rings" | "table";
+  macroNutrientRows: "collapsed" | "expanded" | "hidden";
+  healthGoals: HealthGoal[];
+  customNutrients: CustomNutrientDefinition[];
+  energyBmrKcal: number | null;
+  energyActivityFactor: number;
+  energyEstimateMode: EnergyEstimateMode;
+  energyFixedTdeeKcal: number | null;
+  energyActivityIdentificationMode: "property" | "tag";
+  energyActivityPropertyKey: string;
+  energyActivityPropertyValue: string;
+  energyActivityTag: string;
+  energyActivityCaloriesPropertyKey: string;
+  energyActivityDatePropertyKey: string;
+  calorieGoal: number;
+  proteinGoalG: number;
+  activityGoalMinutes: number;
+  rollupHeading: string;
+  openFoodFactsUserAgent: string;
+  usdaApiKeySecrets: string[];
+  activeWorkoutPath: string;
+  activeWorkoutId: string;
+  activeWorkoutTarget: WorkoutLogTarget | "";
+  activeWorkoutDailyNotePath: string;
+  activeWorkoutPlanPath: string;
+  activeWorkoutTitle: string;
+  activeWorkoutStartedAt: string;
+  activeWorkoutCooldownDays: number;
+  lastSetEndedAt: string;
+  activeWorkoutSetCount: number;
+  pendingFoodLogDraft: PendingFoodLogDraft | null;
+  enableLogging: boolean;
+}
+
+export interface CoreNutrition {
+  calories?: number;
+  proteinG?: number;
+  carbsG?: number;
+  fatG?: number;
+  fiberG?: number;
+  sugarG?: number;
+  sugarAlcoholG?: number;
+  sugarAlcoholCaloriesPerG?: number;
+  alcoholG?: number;
+  sodiumMg?: number;
+}
+
+export interface Nutrition extends CoreNutrition, ExtraNutrition {}
+export type NutritionTotals = Required<CoreNutrition> & ExtraNutrition;
+
+export type NutritionBasis = "labeled-serving" | "per-100g" | "per-100ml" | "estimated-serving";
+
+export interface FoodNutritionProvenance {
+  provider: "usda" | "open-food-facts" | "curated";
+  recordId?: string;
+  dataset?: string;
+  url?: string;
+  updatedAt?: string;
+  retrievedAt?: string;
+  warnings?: string[];
+}
+
+export interface FoodItem {
+  id: string;
+  name: string;
+  brand?: string;
+  aliases?: string[];
+  barcode?: string;
+  imageUrl?: string;
+  sourceImagePath?: string;
+  ingredients?: string;
+  recipeBody?: string;
+  recipeSourceBody?: string;
+  servingAmount?: number;
+  servingUnit?: string;
+  servingGrams?: number;
+  servingMl?: number;
+  nutritionBasis?: NutritionBasis;
+  nutritionProvenance?: FoodNutritionProvenance;
+  recipeServings?: number;
+  /** Explicit finished recipe weight; omit to calculate from ingredient weights. */
+  recipeTotalGrams?: number;
+  source: FoodSource;
+  sourcePath?: string;
+  confidence?: number;
+  notes?: string;
+  nutrition?: Nutrition;
+}
+
+export interface FoodLogEntry {
+  id: string;
+  createdDate: string;
+  completedDate?: string;
+  item: FoodItem;
+  nutritionOverride?: Nutrition;
+  quantity: number;
+  unit: string;
+  servingQuantity?: number;
+  servingUnit?: string;
+  amount?: number;
+  amountUnit?: "g" | "ml";
+  section?: string;
+  tags?: string[];
+  note?: string;
+  dailyNotePath?: string;
+}
+
+export interface ActivityLogEntry {
+  id: string;
+  activity: string;
+  activityType: string;
+  startedAt: string;
+  completedDate: string;
+  durationMinutes?: number;
+  distance?: number;
+  distanceUnit?: string;
+  steps?: number;
+  caloriesBurned?: number;
+  source: ActivitySource;
+  sourceId?: string;
+  device?: string;
+  note?: string;
+  dailyNotePath?: string;
+}
+
+export interface PendingFoodLogDraft {
+  id: string;
+  updatedAt: string;
+  activeTab?: "barcode" | "search" | "mine" | "describe" | "quick";
+  searchInput?: string;
+  consumedDateInput?: string;
+  dateContext?: {
+    dateIso: string;
+    label: string;
+    isToday: boolean;
+    foodLogTarget?: FoodLogTarget;
+    focusAfterLog?: boolean;
+  } | null;
+  selectionItems: Array<{
+    item: FoodItem;
+    quantity: number;
+    unit: string;
+    describedUnit?: string;
+    estimatedUnitGrams?: number;
+    tags?: string[];
+  }>;
+}
+
+export interface WorkoutSet {
+  id: string;
+  exercise: string;
+  exercisePath?: string;
+  workoutPath?: string;
+  workoutPlanPath?: string;
+  createdDate?: string;
+  completedDate?: string;
+  startedAt?: string;
+  endedAt: string;
+  setType?: "normal" | "warmup" | "drop" | "failure";
+  reps?: number;
+  weight?: number;
+  weightUnit?: string;
+  perArm?: boolean;
+  distance?: number;
+  distanceUnit?: string;
+  durationSeconds?: number;
+  rpe?: number;
+  restSeconds?: number;
+  restStartedAt?: string;
+  dropSetGroupId?: string;
+  supersetGroupId?: string;
+  note?: string;
+}
+
+export interface WorkoutExercise {
+  id: string;
+  name: string;
+  supersetGroupId?: string;
+  sets: WorkoutSet[];
+}
+
+export interface ExerciseItem {
+  id: string;
+  name: string;
+  sourcePath?: string;
+  category?: "strength" | "cardio" | "mobility" | "bodyweight" | "timed" | "other";
+  primaryMuscles?: string[];
+  secondaryMuscles?: string[];
+  equipment?: string[];
+  defaultRestSeconds?: number;
+  defaultSetType?: "normal" | "warmup" | "drop" | "failure";
+  recommendedRestDays?: number;
+  notes?: string;
+}
+
+export interface WorkoutPlanItem {
+  id: string;
+  name: string;
+  sourcePath?: string;
+  workflowType?: WorkflowRunType;
+  workflowKind?: WorkflowTemplateKind;
+  recurrenceMode?: WorkflowRecurrenceMode;
+  cooldownDays?: number;
+  targetGapDays?: number;
+  defaultRestSeconds?: number;
+  lastCompletedDate?: string;
+  nextEligibleDate?: string;
+  notes?: string;
+}
+
+export interface WorkoutSession {
+  id: string;
+  title: string;
+  path: string;
+  workoutPlanPath?: string;
+  runKind?: WorkflowRunKind;
+  runType?: WorkflowRunType;
+  workflowPath?: string;
+  workflowName?: string;
+  recurrenceMode?: WorkflowRecurrenceMode;
+  startedAt: string;
+  endedAt?: string;
+  previousCompletedDate?: string;
+  secondsSincePreviousCompletion?: number;
+  cooldownDays?: number;
+  targetGapDays?: number;
+  nextEligibleDate?: string;
+  exercises: WorkoutExercise[];
+}
+
+export const DEFAULT_SETTINGS: TPSHealthSettings = {
+  settingsVersion: TPS_HEALTH_SCHEMA_VERSION,
+  storageMode: "native-records",
+  workoutsFolder: "Health/Workouts",
+  workoutPlansFolder: "Health/Workout Plans",
+  exercisesFolder: "Health/Exercises",
+  foodsFolder: "Health/Foods",
+  recipesFolder: "Health/Recipes",
+  workoutTemplatePath: "",
+  workoutPlanTemplatePath: "",
+  exerciseTemplatePath: "",
+  foodTemplatePath: "",
+  restTimerMode: "count-up",
+  defaultRestSeconds: 90,
+  defaultWorkoutCooldownDays: 0,
+  defaultWorkoutEstimateMinutes: 60,
+  workoutSetNotation: "compact",
+  workoutControlPlacement: "inline",
+  workoutStartPropertyKey: "scheduled",
+  workoutIntervalMode: "duration",
+  workoutIntervalPropertyKey: "timeEstimate",
+  appendWorkoutSummaryToDailyNote: true,
+  defaultFoodLogSection: "",
+  foodLogFilePath: "Health/Food Log.md",
+  workoutLogTarget: "both",
+  workoutDailyNotePlacement: "after-frontmatter",
+  foodIdentificationMode: "metadata-folder-tag",
+  workoutIdentificationMode: "metadata-folder-tag",
+  workoutFrontmatterKey: "kind",
+  workoutPlanFrontmatterValue: "workout-plan",
+  exerciseFrontmatterValue: "exercise",
+  foodFrontmatterKey: "kind",
+  foodFrontmatterFoodValue: "food",
+  foodFrontmatterRecipeValue: "recipe",
+  foodFrontmatterMealValue: "meal",
+  nativeRecordKinds: {
+    foodEntry: "food-entry",
+    activityEntry: "activity-entry",
+    workoutSession: "workout-session",
+    workoutExercise: "workout-exercise",
+  },
+  nativeRecordProperties: {
+    ...EXTRA_NUTRIENT_PROPERTIES,
+    completedDate: "completedDate",
+    food: "food",
+    quantity: "quantity",
+    unit: "unit",
+    calories: "calories",
+    proteinG: "proteinG",
+    carbsG: "carbsG",
+    fatG: "fatG",
+    fiberG: "fiberG",
+    sugarG: "sugarG",
+    sugarAlcoholG: "sugarAlcoholG",
+    alcoholG: "alcoholG",
+    sodiumMg: "sodiumMg",
+    note: "note",
+    activity: "activity",
+    activityType: "activityType",
+    startedAt: "startedAt",
+    durationMinutes: "durationMinutes",
+    distance: "distance",
+    distanceUnit: "distanceUnit",
+    steps: "steps",
+    flightsClimbed: "flightsClimbed",
+    caloriesBurned: "caloriesBurned",
+    source: "source",
+    sourceId: "sourceId",
+    device: "device",
+    status: "status",
+    workoutPlan: "workoutPlan",
+    session: "session",
+    archived: "archived",
+    archivedDate: "archivedDate",
+  },
+  nativeRecordKindAliases: {},
+  nativeRecordPropertyAliases: {},
+  workoutTag: "#tps/workout",
+  exerciseTag: "#tps/exercise",
+  customFoodTag: "#tps/food",
+  recipeTag: "#tps/recipe",
+  foodLogTarget: "daily-note",
+  showFoodLogButtonInGcm: false,
+  automaticDailyRollups: true,
+  includeBrandedFoodSearch: true,
+  macroBlockStyle: "rings",
+  macroNutrientRows: "collapsed",
+  customNutrients: [],
+  healthGoals: [
+    { propertyKey: "consumedCalories", label: "Consumed calories", unit: "kcal", kind: "max", max: 2400, color: "var(--interactive-accent)" },
+    { propertyKey: "protein", label: "Protein", unit: "g", kind: "min", min: 180, color: "var(--color-green)" },
+    { propertyKey: "carbs", label: "Carbs", unit: "g", kind: "range", min: 120, max: 260, color: "var(--color-blue)" },
+    { propertyKey: "fat", label: "Fat", unit: "g", kind: "range", min: 45, max: 90, color: "var(--color-yellow)" },
+    { propertyKey: "fiber", label: "Fiber", unit: "g", kind: "min", min: 30, color: "var(--color-green)" },
+    { propertyKey: "sodium", label: "Sodium", unit: "mg", kind: "max", max: 2300, color: "var(--color-orange)" },
+    { propertyKey: "activity", label: "Activity", unit: "min", kind: "min", min: 45, color: "var(--color-orange)" },
+  ],
+  energyBmrKcal: null,
+  energyActivityFactor: 1.4,
+  energyEstimateMode: "calculated",
+  energyFixedTdeeKcal: null,
+  energyActivityIdentificationMode: "property",
+  energyActivityPropertyKey: "kind",
+  energyActivityPropertyValue: "",
+  energyActivityTag: "",
+  energyActivityCaloriesPropertyKey: "caloriesBurned",
+  energyActivityDatePropertyKey: "completedDate",
+  calorieGoal: 2400,
+  proteinGoalG: 180,
+  activityGoalMinutes: 45,
+  rollupHeading: "Health Rollup",
+  openFoodFactsUserAgent: "TPSHealth/0.1 (Obsidian plugin)",
+  usdaApiKeySecrets: [USDA_API_KEY_SECRET],
+  activeWorkoutPath: "",
+  activeWorkoutId: "",
+  activeWorkoutTarget: "",
+  activeWorkoutDailyNotePath: "",
+  activeWorkoutPlanPath: "",
+  activeWorkoutTitle: "",
+  activeWorkoutStartedAt: "",
+  activeWorkoutCooldownDays: 0,
+  lastSetEndedAt: "",
+  activeWorkoutSetCount: 0,
+  pendingFoodLogDraft: null,
+  enableLogging: false,
+};

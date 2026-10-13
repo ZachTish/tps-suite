@@ -1,0 +1,73 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+
+const reactViewSource = readFileSync(new URL("../src/CalendarReactView.tsx", import.meta.url), "utf8");
+const calendarViewSource = readFileSync(new URL("../src/calendar-view.tsx", import.meta.url), "utf8");
+
+const handleDayMountStart = reactViewSource.indexOf("const handleDayMount = useCallback");
+const handleDayMountEnd = reactViewSource.indexOf("const handleEventWillUnmount = useCallback");
+const handleDateClickStart = calendarViewSource.indexOf("private async handleDateClick");
+const handleDateClickEnd = calendarViewSource.indexOf("private getTargetLeafForOpen");
+
+assert.notEqual(handleDayMountStart, -1, "handleDayMount should exist");
+assert.notEqual(handleDayMountEnd, -1, "handleEventWillUnmount should follow handleDayMount");
+assert.notEqual(handleDateClickStart, -1, "handleDateClick should exist");
+assert.notEqual(handleDateClickEnd, -1, "getTargetLeafForOpen should follow handleDateClick");
+
+const handleDayMountSource = reactViewSource.slice(handleDayMountStart, handleDayMountEnd);
+const handleDateClickSource = calendarViewSource.slice(handleDateClickStart, handleDateClickEnd);
+
+test("calendar date links open previews from click, not hover", () => {
+  assert.match(handleDayMountSource, /link\.addEventListener\('click'/);
+  assert.match(handleDayMountSource, /currentOnDateClick\(date, linkEl, e\)/);
+  assert.doesNotMatch(reactViewSource, /onDateMouseEnter/);
+  assert.doesNotMatch(reactViewSource, /dayHeaderHoverHandlersRef/);
+  assert.doesNotMatch(handleDayMountSource, /mouseenter/);
+  assert.doesNotMatch(calendarViewSource, /handleDateMouseEnter/);
+  assert.doesNotMatch(calendarViewSource, /onDateMouseEnter=/);
+  assert.match(calendarViewSource, /private mobileDateTap: \{ path: string; at: number \} \| null = null;/);
+  assert.match(handleDateClickSource, /Platform\.isMobile && targetEl && isPlainClick/);
+  assert.match(handleDateClickSource, /isRepeatedMobileTap = previousTap\?\.path === path && now - previousTap\.at < 650;/);
+  assert.match(handleDateClickSource, /const shouldOpenTarget = isDoubleClick \|\| isRepeatedMobileTap;/);
+  assert.match(handleDateClickSource, /const shouldPreviewOnly = .*isPlainClick && !shouldOpenTarget/s);
+  assert.match(handleDateClickSource, /this\.scheduleDateTargetPreview\(previewFile, targetEl, event\)/);
+});
+
+test("calendar day marker chips leave the full header width available to the date label", () => {
+  assert.match(reactViewSource, /const showDayMarkerMenu = useCallback/);
+  assert.match(reactViewSource, /event\.stopPropagation\(\)/);
+  assert.match(reactViewSource, /<button\s+type="button"\s+className="tps-calendar-day-marker-chip is-archived-external"/);
+  assert.doesNotMatch(reactViewSource, /tps-calendar-day-marker-chip is-auxiliary-date/);
+  assert.doesNotMatch(reactViewSource, /className="tps-calendar-day-marker-overlay"[\s\S]{0,120}aria-hidden="true"/);
+  assert.match(reactViewSource, /columnRect\.bottom - rootRect\.top - 24/);
+
+  const calendarCss = readFileSync(new URL("../src/calendar.css", import.meta.url), "utf8");
+  assert.match(calendarCss, /\.tps-calendar-day-marker-overlay \{[\s\S]*pointer-events: auto !important;/);
+  assert.match(calendarCss, /\.tps-calendar-day-marker-chip \{[\s\S]*cursor: pointer !important;/);
+  assert.match(calendarCss, /\.fc \.fc-col-header-cell-cushion \{[\s\S]*max-width: 100% !important;[\s\S]*text-overflow: ellipsis !important;/);
+  assert.doesNotMatch(calendarCss, /fc-col-header-cell-cushion \{[\s\S]{0,120}max-width: calc\(100% - (?:44|24)px\)/);
+});
+
+test("calendar headers omit the aggregate task context control and retain numeric dates", () => {
+  assert.doesNotMatch(reactViewSource, /CalendarDayContext|dayContextByDate/);
+  assert.doesNotMatch(reactViewSource, /className="tps-calendar-day-marker-chip is-day-context"/);
+  assert.doesNotMatch(reactViewSource, /const showDayContextMenu = useCallback/);
+  assert.doesNotMatch(reactViewSource, /<CalendarMarkerIcon iconName="list-checks"/);
+  assert.match(reactViewSource, /dayHeaderShowDate[\s\S]*\? \{ weekday: dayHeaderFormatSetting, month: "short", day: "numeric" \}/);
+
+  assert.doesNotMatch(calendarViewSource, /CalendarDayContext|dayContextByDate|buildDayContextByDate|countOpenDailyNoteTasksByDate/);
+});
+
+test("calendar still skips external events already represented by local notes", () => {
+  assert.match(calendarViewSource, /if \(handledExternalEventKeys\.has\(this\.buildExternalEventIdentityKey\(extEvent\.id, extEvent\.sourceUrl\)\)\) \{/);
+  assert.match(calendarViewSource, /skippedHandledExternal \+= 1;[\s\S]*continue;/);
+  assert.match(calendarViewSource, /const finalEntries = Array\.from\(uniqueEntries\.values\(\)\);/);
+});
+
+test("embedded calendars render the configured slot range instead of cutting to scroll time", () => {
+  assert.match(reactViewSource, /const embeddedSlotMinTimeValue = slotMinTimeValue;/);
+  assert.match(reactViewSource, /const fullCalendarScrollTimeValue = isEmbedMode[\s\S]*\? slotMinTimeValue[\s\S]*: `\$\{defaultScrollTimeSetting\}:00`;/);
+  assert.doesNotMatch(reactViewSource, /isEmbedMode && !hiddenTimeVisible\s*\?\s*`\$\{defaultScrollTimeSetting\}:00`/);
+  assert.match(reactViewSource, /scrollTime=\{fullCalendarScrollTimeValue\}/);
+});
